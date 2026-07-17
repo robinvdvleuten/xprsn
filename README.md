@@ -60,6 +60,30 @@ const cached = expr => cache.get(expr) ?? cache.set(expr, compile(expr)).get(exp
 
 `==`/`!=` are strict (JS loose equality is a footgun). To keep the package tiny, xprsn leaves out string concatenation (`~`), `matches`, ranges (`..`), bitwise operators, and null-safe `?.`.
 
+
+### Multi-step expressions
+
+Expressions have no local variables. When a calculation needs intermediate results, split it into named steps and feed each result back in as a variable for the next expression:
+
+```js
+const steps = [
+  ['subtotal', 'price * qty'],
+  ['discount', 'subtotal >= 100 ? subtotal * 0.1 : 0'],
+  ['total', 'subtotal - discount + shipping'],
+].map(([name, expr]) => [name, compile(expr)]);
+
+function run(values) {
+  const ctx = { ...values };
+  for (const [name, fn] of steps) ctx[name] = fn(ctx);
+  return ctx;
+}
+
+run({ price: 60, qty: 2, shipping: 5 });
+// => { price: 60, qty: 2, shipping: 5, subtotal: 120, discount: 12, total: 113 }
+```
+
+Each step compiles once. The steps are plain data, so you can store them in a database or config file and let users edit the whole calculation.
+
 ## Content Security Policy
 
 This package works under a strict CSP such as:
