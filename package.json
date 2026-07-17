@@ -1,0 +1,47 @@
+{
+	"name": "xprsn",
+	"version": "0.0.0",
+	"description": "Tiny, CSP-safe expression language for JavaScript. No eval, no new Function.",
+	"repository": "robinvdvleuten/xprsn",
+	"license": "MIT",
+	"author": {
+		"name": "Robin van der Vleuten",
+		"email": "robin@webstronauts.com",
+		"url": "https://robinvdvleuten.nl"
+	},
+	"type": "module",
+	"source": "src/index.js",
+	"main": "./dist/index.cjs",
+	"module": "./dist/index.module.js",
+	"unpkg": "./dist/index.umd.js",
+	"types": "./index.d.ts",
+	"exports": {
+		".": {
+			"types": "./index.d.ts",
+			"import": "./dist/index.module.js",
+			"require": "./dist/index.cjs",
+			"default": "./dist/index.module.js"
+		}
+	},
+	"files": [
+		"dist",
+		"src",
+		"index.d.ts"
+	],
+	"scripts": {
+		"build": "microbundle --no-sourcemap",
+		"prepublishOnly": "npm run build",
+		"test": "node --disallow-code-generation-from-strings node_modules/tape/bin/tape test/*.test.js"
+	},
+	"keywords": [
+		"expression",
+		"expression-language",
+		"csp",
+		"parser",
+		"evaluate"
+	],
+	"devDependencies": {
+		"microbundle": "^0.15.1",
+		"tape": "^5.9.0"
+	}
+}
