@@ -27,7 +27,10 @@ evaluate('lower(name) == "robin"', { name: 'ROBIN' }, { lower: s => s.toLowerCas
 
 ## How far can you push this?
 
-Pretty far. [sjabloon](https://github.com/robinvdvleuten/sjabloon) builds a full template engine on top of xprsn: `{{ expr }}` interpolation with HTML escaping, `{{#if}}` and `{{#each}}` blocks, and any xprsn expression inside every tag. It uses the same trick one level up, so templates compile to closures too and the whole stack stays CSP-safe. All of that costs about 0.8KB on top of this package.
+Pretty far. Two packages build on xprsn with the same trick one level up, so everything compiles to closures and the whole stack stays CSP-safe:
+
+- [sjabloon](https://github.com/robinvdvleuten/sjabloon) is a full template engine: `{{ expr }}` interpolation with HTML escaping, `{{#if}}`/`{{#elif}}` and `{{#each}}` blocks, and any xprsn expression inside every tag. About 1KB on top of this package.
+- [padvinder](https://github.com/robinvdvleuten/padvinder) is a JSONPath engine where every `?(...)` filter is an xprsn expression. Filter evaluation is the part of JSONPath that has produced real code-injection CVEs elsewhere; here it goes through a parser with no route to code execution. About 1.2KB on top.
 
 ## API
 
