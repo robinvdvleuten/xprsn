@@ -217,7 +217,9 @@ export function compile(src, funcs) {
 	let e = toks.length ? ternary() : bad();
 	i < toks.length && bad();
 	let f = v => e(v || {});
-	f.names = [...nm];
+	// Array.from, not a spread: the bundler's transpile turns `[...set]` into
+	// `[].concat(set)`, which wraps the Set instead of unpacking it.
+	f.names = Array.from(nm);
 	return f;
 }
 
