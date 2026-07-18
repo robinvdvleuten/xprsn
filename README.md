@@ -58,11 +58,13 @@ const cached = expr => cache.get(expr) ?? cache.set(expr, compile(expr)).get(exp
 | Logical | `and` `&&` `or` `\|\|` `not` `!` (with short-circuiting) |
 | Membership | `"admin" in roles` (arrays: `includes`; strings: substring; objects: own keys only) |
 | Ternary | `a ? b : c`, and the `a ?: b` shorthand |
+| Null coalescing | `a ?? b`, chains as `a ?? b ?? c` |
 | Access | `user.name`, `user["name"]`, `items[0]`, `items[i + 1]` |
+| Null-safe access | `user?.name`, `items?.[0]`, `name?.toUpperCase()` |
 | Method calls | `name.toUpperCase()`, `items.indexOf(2)` |
 | Functions | `lower(name)`, resolved only from the registry you pass in |
 
-`==`/`!=` are strict (JS loose equality is a footgun). To keep the package tiny, xprsn leaves out string concatenation (`~`), `matches`, ranges (`..`), bitwise operators, and null-safe `?.`.
+`==`/`!=` are strict (JS loose equality is a footgun). `?.` guards each step on its own, so chain it at every link that can be null: `a?.b?.c`. To keep the package tiny, xprsn leaves out string concatenation (`~`), `matches`, ranges (`..`), and bitwise operators.
 
 ### Multi-step expressions
 

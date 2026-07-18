@@ -11,6 +11,9 @@ test('syntax errors', t => {
 	t.throws(() => compile('a.'), SyntaxError);
 	t.throws(() => compile('a.1'), SyntaxError, 'property names must be identifiers');
 	t.throws(() => compile('1 ? 2'), SyntaxError, 'unterminated ternary');
+	t.throws(() => compile('a ??'), /Unexpected end of expression/);
+	t.throws(() => compile('a?.'), SyntaxError);
+	t.throws(() => compile('a?.[1'), SyntaxError);
 	t.throws(() => compile('@'), /Unexpected @/);
 	t.end();
 });

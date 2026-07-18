@@ -5,10 +5,11 @@
  */
 
 // Tokenizer: numbers, strings, words, multi-char operators, any other symbol.
-const TOKENS = /\d*\.?\d+(?:[eE][+-]?\d+)?|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\w+|[<>=!*]=|&&|\|\||\*\*|\S/g;
+// `?.` must not swallow the `?` of a ternary before a bare decimal (`a ?.5 : b`).
+const TOKENS = /\d*\.?\d+(?:[eE][+-]?\d+)?|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\w+|\?\.(?!\d)|\?\?|[<>=!*]=|&&|\|\||\*\*|\S/g;
 
 // Binary operator precedence (higher binds tighter). `**` is right-associative.
-const PREC = { or: 1, '||': 1, and: 2, '&&': 2, '==': 3, '!=': 3, in: 4, '<': 5, '>': 5, '<=': 5, '>=': 5, '+': 6, '-': 6, '*': 7, '/': 7, '%': 7, '**': 8 };
+const PREC = { '??': 1, or: 2, '||': 2, and: 3, '&&': 3, '==': 4, '!=': 4, in: 5, '<': 6, '>': 6, '<=': 6, '>=': 6, '+': 7, '-': 7, '*': 8, '/': 8, '%': 8, '**': 9 };
 
 // Shared parser state; parsing is synchronous so this is safe.
 let toks, i, fns;
@@ -135,6 +136,26 @@ let postfix = () => {
 			let k = ternary();
 			expect(']');
 			e = (o => v => get(o(v), k(v)))(e);
+		} else if (eat('?.')) {
+			// Null-safe per step: a nullish base yields undefined instead of
+			// throwing. Chain `?.` at every link that can be nullish.
+			if (eat('[')) {
+				let k = ternary();
+				expect(']');
+				e = (o => v => { let b = o(v); return b == null ? undefined : get(b, k(v)); })(e);
+			} else {
+				let k = toks[i++] ?? bad();
+				/^[A-Za-z_]/.test(k) || (i--, bad());
+				if (eat('(')) {
+					let args = list(')');
+					e = (o => v => {
+						let b = o(v);
+						return b == null ? undefined : get(b, k).apply(b, args.map(a => a(v)));
+					})(e);
+				} else {
+					e = (o => v => { let b = o(v); return b == null ? undefined : get(b, k); })(e);
+				}
+			}
 		} else return e;
 	}
 };
@@ -155,6 +176,7 @@ let expr = (min = 1) => {
 		let r = expr(op === '**' ? p : p + 1);
 		l = op === 'and' || op === '&&' ? (a => v => a(v) && r(v))(l)
 			: op === 'or' || op === '||' ? (a => v => a(v) || r(v))(l)
+			: op === '??' ? (a => v => a(v) ?? r(v))(l)
 			: ((o, a) => v => apply(o, a(v), r(v)))(op, l);
 	}
 	return l;

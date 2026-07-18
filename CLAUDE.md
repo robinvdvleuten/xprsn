@@ -24,8 +24,9 @@ Parser state (`toks`, `i`, `fns`) is module-level and shared; parsing is synchro
 ## Semantics to preserve
 
 - `==`/`!=` compile to strict `===`/`!==` (documented, intentional).
-- `and`/`or`/`&&`/`||` short-circuit; `**` is right-associative.
+- `and`/`or`/`&&`/`||` and `??` short-circuit; `**` is right-associative; `??` has the lowest binary precedence.
 - `a ?: b` yields the condition's value when truthy, else `b`.
+- `?.` (also `?.[...]` and `?.m()`) yields `undefined` on a nullish base and guards per step, not per chain — `a?.b.c` still throws if `a` is null. The tokenizer must keep the `(?!\d)` lookahead so `a ?.5 : b` stays a ternary.
 - Unknown function names and malformed input throw `SyntaxError` at compile time; null-base and blocked-key access throw `TypeError` at runtime.
 - There are no assignment operators — expressions must remain read-only.
 

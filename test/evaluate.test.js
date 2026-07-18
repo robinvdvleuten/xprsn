@@ -114,6 +114,39 @@ test('ternary', t => {
 	t.end();
 });
 
+test('null coalescing', t => {
+	t.equal(evaluate('null ?? "fallback"'), 'fallback');
+	t.equal(evaluate('a ?? "fallback"', {}), 'fallback', 'missing variable is nullish');
+	t.equal(evaluate('0 ?? "fallback"'), 0, 'falsy but not nullish');
+	t.equal(evaluate('"" ?? "fallback"'), '', 'empty string survives');
+	t.equal(evaluate('a ?? b ?? "last"', {}), 'last', 'chains');
+	t.equal(evaluate('a ?? b', { a: null, b: 2 }), 2);
+	t.equal(evaluate('1 + 2 ?? 9'), 3, 'binds looser than arithmetic');
+	t.equal(evaluate('null ?? false or "x"'), 'x', 'binds looser than or');
+	t.equal(evaluate('a ?? "d" == "d" ? "empty" : a', {}), 'empty', 'ternary is outermost');
+	t.end();
+});
+
+test('null-safe access', t => {
+	t.equal(evaluate('a?.b', { a: null }), undefined);
+	t.equal(evaluate('a?.b', {}), undefined, 'missing base');
+	t.equal(evaluate('a?.b', { a: { b: 1 } }), 1);
+	t.equal(evaluate('a?.b?.c', { a: { b: null } }), undefined, 'chained');
+	t.equal(evaluate('a?.[0]', { a: null }), undefined, 'null-safe index');
+	t.equal(evaluate('a?.[i + 1]', { a: ['x', 'y'], i: 0 }), 'y');
+	t.equal(evaluate('a?.toUpperCase()', { a: null }), undefined, 'null-safe method call');
+	t.equal(evaluate('a?.toUpperCase()', { a: 'hi' }), 'HI');
+	t.equal(evaluate('a?.b ?? "none"', { a: null }), 'none', 'pairs with ??');
+	t.throws(() => evaluate('a?.b.c', { a: null }), TypeError, 'safety is per step, not per chain');
+	t.end();
+});
+
+test('ternary before a bare decimal is not null-safe access', t => {
+	t.equal(evaluate('a ?.5 : 1', { a: true }), 0.5);
+	t.equal(evaluate('a?.5:1', { a: false }), 1);
+	t.end();
+});
+
 test('property and index access', t => {
 	const values = { user: { name: 'Robin', address: { city: 'Eindhoven' } }, items: [{ price: 60 }] };
 	t.equal(evaluate('user.name', values), 'Robin');
