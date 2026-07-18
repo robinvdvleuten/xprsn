@@ -4,7 +4,14 @@ A tiny, CSP-safe expression language for JavaScript. **~1.2KB min+gzip, zero dep
 
 [![NPM version](https://img.shields.io/npm/v/xprsn.svg)](https://www.npmjs.com/package/xprsn)
 [![Build Status](https://github.com/robinvdvleuten/xprsn/actions/workflows/test.yml/badge.svg)](https://github.com/robinvdvleuten/xprsn/actions/workflows/test.yml)
-[![licenses](https://licenses.dev/b/npm/xprsn)](https://licenses.dev/npm/xprsn)
+[![NPM downloads](https://img.shields.io/npm/dm/xprsn.svg)](https://www.npmjs.com/package/xprsn)
+[![MIT license](https://img.shields.io/github/license/robinvdvleuten/xprsn.svg)](https://github.com/robinvdvleuten/xprsn/blob/main/LICENSE)
+
+<a href="https://webstronauts.com?utm_source=github&utm_medium=readme&utm_campaign=xprsn">
+	<picture>
+		<img src="https://webstronauts.com/images/sponsored-by.svg" alt="Sponsored by The Webstronauts" width="200" height="65">
+	</picture>
+</a>
 
 Evaluates expressions like `user.age > 18 and "admin" in user.roles` against data you provide, without running them as JavaScript. xprsn parses each expression into a chain of plain closures, so there is no `eval` and no `new Function`.
 
