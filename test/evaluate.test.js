@@ -180,6 +180,19 @@ test('compile once, evaluate many', t => {
 	t.end();
 });
 
+test('compiled functions expose their free variables', t => {
+	t.deepEqual(compile('a + b').names, ['a', 'b']);
+	t.deepEqual(compile('a + a * a').names, ['a'], 'deduplicated');
+	t.deepEqual(compile('42 + "x"').names, [], 'literals reference nothing');
+	t.deepEqual(compile('user.name.toUpperCase()').names, ['user'], 'only the root, not properties or methods');
+	t.deepEqual(compile('f(a)', { f: x => x }).names, ['a'], 'function names are a separate namespace');
+	t.deepEqual(compile('{key: a}').names, ['a'], 'bare hash keys are not variables');
+	t.deepEqual(compile('a?.b ?? c').names, ['a', 'c'], 'null-safe chains count their root');
+	t.deepEqual(compile('items[i + 1]').names, ['items', 'i'], 'index expressions are scanned too');
+	t.deepEqual(compile('x and y or not z').names, ['x', 'y', 'z'], 'word operators are not variables');
+	t.end();
+});
+
 test('missing values default to undefined', t => {
 	t.equal(evaluate('a', {}), undefined);
 	t.equal(compile('1 + 1')(), 2, 'values argument is optional');

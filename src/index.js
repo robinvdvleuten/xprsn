@@ -12,7 +12,7 @@ const TOKENS = /\d*\.?\d+(?:[eE][+-]?\d+)?|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\
 const PREC = { '??': 1, or: 2, '||': 2, and: 3, '&&': 3, '==': 4, '!=': 4, in: 5, '<': 6, '>': 6, '<=': 6, '>=': 6, '+': 7, '-': 7, '*': 8, '/': 8, '%': 8, '**': 9 };
 
 // Shared parser state; parsing is synchronous so this is safe.
-let toks, i, fns;
+let toks, i, fns, nm;
 
 let err = msg => { throw SyntaxError(msg) };
 let bad = () => err('Unexpected ' + (toks[i] ?? 'end of expression'));
@@ -110,6 +110,7 @@ let primary = () => {
 			let fn = fns[t], args = list(')');
 			return v => fn(...args.map(e => e(v)));
 		}
+		nm.add(t);
 		return v => get(v, t);
 	}
 
@@ -199,18 +200,25 @@ let ternary = () => {
 /**
  * Compile an expression once, evaluate it many times.
  *
+ * The returned evaluator exposes `names`: the free variables the expression
+ * reads, deduplicated. Function names, property names, and hash keys are not
+ * included.
+ *
  * @param {string} src The expression, e.g. `'user.age > 18 and "admin" in user.roles'`.
  * @param {Record<string, Function>} [funcs] Functions callable from the expression.
- * @returns {(values?: Record<string, any>) => any} Evaluator for the compiled expression.
+ * @returns {{(values?: Record<string, any>): any, names: string[]}} Evaluator for the compiled expression.
  * @throws {SyntaxError} On malformed input or unknown function names.
  */
 export function compile(src, funcs) {
 	toks = String(src).match(TOKENS) || [];
 	i = 0;
 	fns = funcs || {};
+	nm = new Set();
 	let e = toks.length ? ternary() : bad();
 	i < toks.length && bad();
-	return v => e(v || {});
+	let f = v => e(v || {});
+	f.names = [...nm];
+	return f;
 }
 
 /**

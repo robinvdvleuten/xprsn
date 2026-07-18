@@ -28,6 +28,7 @@ Parser state (`toks`, `i`, `fns`) is module-level and shared; parsing is synchro
 - `a ?: b` yields the condition's value when truthy, else `b`.
 - `?.` (also `?.[...]` and `?.m()`) yields `undefined` on a nullish base and guards per step, not per chain — `a?.b.c` still throws if `a` is null. The tokenizer must keep the `(?!\d)` lookahead so `a ?.5 : b` stays a ternary.
 - Unknown function names and malformed input throw `SyntaxError` at compile time; null-base and blocked-key access throw `TypeError` at runtime.
+- Compiled functions expose `names`: the deduplicated free root variables of the expression (no property names, hash keys, or registry functions). Unknown variables do NOT throw — they evaluate to `undefined`; author-time validation is the caller's job via `names`.
 - There are no assignment operators — expressions must remain read-only.
 
 ## Conventions

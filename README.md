@@ -35,6 +35,15 @@ Pretty far. [sjabloon](https://github.com/robinvdvleuten/sjabloon) builds a full
 
 Parses the expression and returns an evaluator function `(values?) => result`. Throws a `SyntaxError` on malformed input or unknown function names, so a bad expression fails at compile time rather than during evaluation.
 
+The evaluator also carries `names`: the variables the expression reads, deduplicated. Property names, hash keys, and registry functions don't count; only the roots do.
+
+```js
+const fn = compile('user.age > 18 and (discount ?? 0) > 0');
+fn.names; // => ['user', 'discount']
+```
+
+That one array covers a lot of ground when expressions come from your users: validate a rule against your schema before saving it (`fn.names.every(n => n in schema)`), drive autocomplete in a rule editor, or find which stored rules read a field you're about to rename. It also pairs with the multi-step pattern below, where each step's `names` are its dependencies.
+
 ### `evaluate(expression, values?, functions?)`
 
 Shorthand for `compile(expression, functions)(values)`.
