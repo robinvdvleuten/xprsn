@@ -27,10 +27,10 @@ evaluate('lower(name) == "robin"', { name: 'ROBIN' }, { lower: s => s.toLowerCas
 
 ## How far can you push this?
 
-Pretty far. Two packages build on xprsn with the same trick one level up, so everything compiles to closures and the whole stack stays CSP-safe:
+Pretty far. The same trick, a one-regex tokenizer feeding a parser that emits closures, carries into two sibling packages:
 
-- [sjabloon](https://github.com/robinvdvleuten/sjabloon) is a full template engine: `{{ expr }}` interpolation with HTML escaping, `{{#if}}`/`{{#elif}}` and `{{#each}}` blocks, and any xprsn expression inside every tag. About 1KB on top of this package.
-- [padvinder](https://github.com/robinvdvleuten/padvinder) is a JSONPath engine where every `?(...)` filter is an xprsn expression. Filter evaluation is the part of JSONPath that has produced real code-injection CVEs elsewhere; here it goes through a parser with no route to code execution. About 1.2KB on top.
+- [sjabloon](https://github.com/robinvdvleuten/sjabloon) is a full template engine built directly on xprsn: `{{ expr }}` interpolation with HTML escaping, `{{#if}}`/`{{#elif}}` and `{{#each}}` blocks, and any xprsn expression inside every tag. About 1KB on top of this package.
+- [padvinder](https://github.com/robinvdvleuten/padvinder) is a JSONPath engine that started here and grew its own parser. Filter evaluation is the part of JSONPath that has produced real code-injection CVEs elsewhere; padvinder parses filters to closures with no route to code execution, and now passes the full RFC 9535 compliance suite as a standalone, zero-dependency package.
 
 ## API
 
