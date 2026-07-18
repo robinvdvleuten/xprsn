@@ -47,6 +47,14 @@ fn.names; // => ['user', 'discount']
 
 That one array covers a lot of ground when expressions come from your users: validate a rule against your schema before saving it (`fn.names.every(n => n in schema)`), drive autocomplete in a rule editor, or find which stored rules read a field you're about to rename. It also pairs with the multi-step pattern below, where each step's `names` are its dependencies.
 
+TypeScript users get the same check at compile time: when the expression is a string literal, `names` is inferred as a literal union and the values parameter is typed from it, so a typo'd key is a type error before anything runs.
+
+```ts
+const fn = compile('user.age > 18');
+fn({ usr: { age: 30 } });
+//   ^^^ error: 'usr' does not exist in type '{ user?: any }'
+```
+
 ### `evaluate(expression, values?, functions?)`
 
 Shorthand for `compile(expression, functions)(values)`.

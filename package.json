@@ -29,9 +29,10 @@
 		"index.d.ts"
 	],
 	"scripts": {
-		"build": "microbundle --no-sourcemap",
+		"build": "microbundle --no-sourcemap --generateTypes false",
 		"prepublishOnly": "npm run build",
-		"test": "node --disallow-code-generation-from-strings node_modules/tape/bin/tape test/*.test.js"
+		"test": "node --disallow-code-generation-from-strings node_modules/tape/bin/tape test/*.test.js && npm run typecheck",
+		"typecheck": "tsc --noEmit --strict test/types.check.ts"
 	},
 	"keywords": [
 		"expression",
@@ -42,6 +43,7 @@
 	],
 	"devDependencies": {
 		"microbundle": "^0.15.1",
-		"tape": "^5.9.0"
+		"tape": "^5.9.0",
+		"typescript": "^7.0.2"
 	}
 }
