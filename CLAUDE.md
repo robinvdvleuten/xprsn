@@ -7,6 +7,7 @@ Tiny, CSP-safe expression language for JavaScript. Zero runtime dependencies, pl
 - `npm test` — tape suites under `node --disallow-code-generation-from-strings` (strict-CSP simulation), then `npm run typecheck` (a smoke check that `index.d.ts` is usable, in `test/types.check.ts`).
 - `npm run build` — microbundle → `dist/` (ESM/CJS/UMD) + `index.d.ts` generated from JSDoc. Prints min+gzip sizes.
 - Run a single suite: `npx tape test/evaluate.test.js`
+- `npm run bench` — zero-dependency micro-benchmarks in `bench/`, run against `src/`. Measures compile (parse) and evaluate throughput separately, since the design is compile-once, evaluate-many. `bench/` is not in `files`, so it is never published.
 
 ## Architecture
 

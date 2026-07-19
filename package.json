@@ -32,7 +32,8 @@
 		"build": "microbundle --no-sourcemap --generateTypes false",
 		"prepublishOnly": "npm run build",
 		"test": "node --disallow-code-generation-from-strings node_modules/tape/bin/tape test/*.test.js && npm run typecheck",
-		"typecheck": "tsc --noEmit --strict test/types.check.ts"
+		"typecheck": "tsc --noEmit --strict test/types.check.ts",
+		"bench": "node bench/index.js"
 	},
 	"keywords": [
 		"expression",
