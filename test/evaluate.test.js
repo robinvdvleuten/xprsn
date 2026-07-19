@@ -205,6 +205,17 @@ test('compiled functions expose their free variables', t => {
 	t.end();
 });
 
+test('bound names are excluded from free variables', t => {
+	const f = compile('@.price * qty + $.tax', {}, { bound: ['@', '$'] });
+	t.deepEqual(f.names, ['qty'], 'host-injected anchors are omitted');
+	t.equal(f({ '@': { price: 2 }, qty: 3, '$': { tax: 1 } }), 7, 'bound names still resolve at eval time');
+	t.deepEqual(compile('a + b', {}, { bound: new Set(['a']) }).names, ['b'], 'bound accepts a Set');
+	t.deepEqual(compile('a + b', {}).names, ['a', 'b'], 'no bound is unchanged');
+	t.deepEqual(compile('region.key', {}, { bound: ['region'] }).names, [], 'a bound root drops out entirely');
+	t.deepEqual(compile('f(a)', { f: x => x }, { bound: ['a'] }).functions, ['f'], 'functions are unaffected by bound');
+	t.end();
+});
+
 test('compiled functions expose the registry functions they call', t => {
 	const fns = { sum: x => x, avg: x => x, lower: s => s };
 	t.deepEqual(compile('sum(a)', fns).functions, ['sum']);

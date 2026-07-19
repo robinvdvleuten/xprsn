@@ -41,7 +41,7 @@ Pretty far. The same trick, a one-regex tokenizer feeding a parser that emits cl
 
 ## API
 
-### `compile(expression, functions?)`
+### `compile(expression, functions?, options?)`
 
 Parses the expression and returns an evaluator function `(values?) => result`. Throws a `SyntaxError` on malformed input or unknown function names, so a bad expression fails at compile time rather than during evaluation.
 
@@ -62,6 +62,12 @@ fn.functions; // => ['sum']
 ```
 
 Unknown functions already throw at compile time, so this is for introspection rather than safety: check a stored expression against the functions available in its context before running it, for example rejecting an aggregate like `sum(...)` where no row group is in scope.
+
+If your host injects its own variables into scope — a `@` for the current row, a `$` for the root, loop variables — pass them as `options.bound` so they're left out of `names`, which then reports only the caller-relevant free variables. Bound names still resolve normally at evaluation time; only the introspection output changes.
+
+```js
+compile('@.price * qty', {}, { bound: ['@'] }).names; // => ['qty']
+```
 
 ### `evaluate(expression, values?, functions?)`
 

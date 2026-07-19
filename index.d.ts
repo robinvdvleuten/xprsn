@@ -13,13 +13,19 @@ type Fn = (...args: any[]) => any;
  * variables and missing properties evaluate to `null` (reading through a null
  * base still throws); validate expected variables yourself via `names`.
  *
+ * `opts.bound` lists names the host already has in scope; they are excluded
+ * from `names` at runtime (a bound name still resolves normally). The `names`
+ * type is not narrowed — it stays a superset when `bound` is passed.
+ *
  * @param src The expression, e.g. `'user.age > 18 and "admin" in user.roles'`.
  * @param funcs Functions callable from the expression.
+ * @param opts `bound`: root names to omit from `names`.
  * @throws {SyntaxError} On malformed input or unknown function names.
  */
 export function compile(
 	src: string,
-	funcs?: Record<string, Fn>
+	funcs?: Record<string, Fn>,
+	opts?: { bound?: Iterable<string> }
 ): { (values?: Record<string, any>): any; names: string[]; functions: string[] };
 
 /**

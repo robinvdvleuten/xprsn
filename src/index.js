@@ -16,8 +16,12 @@ const TOKENS = /\d*\.?\d+(?:[eE][+-]?\d+)?|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[
 const PREC = { '??': 1, or: 2, '||': 2, and: 3, '&&': 3, '==': 4, '!=': 4, in: 5, '<': 6, '>': 6, '<=': 6, '>=': 6, '~': 7, '+': 8, '-': 8, '*': 9, '/': 9, '%': 9, '**': 10 };
 
 // Shared parser state; parsing is synchronous so this is safe.
-// `nm` collects free variables, `fnm` the registry functions actually called.
-let toks, i, fns, nm, fnm;
+// `nm` collects free variables, `fnm` the registry functions actually called,
+// `bnd` the names the host already has in scope (excluded from `nm`).
+let toks, i, fns, nm, fnm, bnd;
+
+// Shared empty set so the common no-`bound` path allocates nothing.
+let EMPTY = new Set();
 
 let err = msg => { throw SyntaxError(msg) };
 let bad = () => err('Unexpected ' + (toks[i] ?? 'end of expression'));
@@ -124,7 +128,7 @@ let primary = () => {
 			let fn = fns[t], args = list(')');
 			return v => fn(...args.map(e => e(v)));
 		}
-		nm.add(t);
+		bnd.has(t) || nm.add(t);
 		return v => get(v, t);
 	}
 
@@ -207,17 +211,23 @@ let ternary = () => {
  * `null` (not undefined), so `x == null` tests hold. Reading through a null base
  * still throws; registry function return values are untouched.
  *
+ * `opts.bound` lists names the host already has in scope (e.g. loop or anchor
+ * variables it injects into `values`); they are excluded from `names` only. Such
+ * a name still resolves normally at evaluation time, and `functions` is unaffected.
+ *
  * @param {string} src The expression, e.g. `'user.age > 18 and "admin" in user.roles'`.
  * @param {Record<string, Function>} [funcs] Functions callable from the expression.
+ * @param {{bound?: Iterable<string>}} [opts] `bound`: root names to omit from `names`.
  * @returns {{(values?: Record<string, any>): any, names: string[], functions: string[]}} Evaluator for the compiled expression.
  * @throws {SyntaxError} On malformed input or unknown function names.
  */
-export function compile(src, funcs) {
+export function compile(src, funcs, opts) {
 	toks = String(src).match(TOKENS) || [];
 	i = 0;
 	fns = funcs || {};
 	nm = new Set();
 	fnm = new Set();
+	bnd = opts && opts.bound ? new Set(opts.bound) : EMPTY;
 	let e = toks.length ? ternary() : bad();
 	i < toks.length && bad();
 	let f = v => e(v || {});
