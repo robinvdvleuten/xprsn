@@ -37,6 +37,18 @@ test('precedence and associativity', t => {
 	t.end();
 });
 
+test('string concatenation', t => {
+	t.equal(evaluate('"a" ~ "b"'), 'ab');
+	t.equal(evaluate('"x-" ~ 5'), 'x-5', 'coerces the right side');
+	t.equal(evaluate('1 ~ 2'), '12', 'coerces both sides');
+	t.equal(evaluate('"a" ~ "b" ~ "c"'), 'abc', 'left-associative chain');
+	t.equal(evaluate('first ~ " " ~ last', { first: 'Robin', last: 'v' }), 'Robin v');
+	t.equal(evaluate('"sum: " ~ a + b', { a: 1, b: 2 }), 'sum: 3', '~ binds looser than +');
+	t.equal(evaluate('a ~ b == "12"', { a: 1, b: 2 }), true, '~ binds tighter than ==');
+	t.deepEqual(compile('a ~ b').names, ['a', 'b'], 'operands are still scanned for names');
+	t.end();
+});
+
 test('unary operators', t => {
 	t.equal(evaluate('-5'), -5);
 	t.equal(evaluate('+5'), 5);

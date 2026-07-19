@@ -81,6 +81,7 @@ const cached = expr => cache.get(expr) ?? cache.set(expr, compile(expr)).get(exp
 | Arrays | `[1, 2, 3]` |
 | Hashes | `{"key": value}`, `{key: value}` |
 | Arithmetic | `+` `-` `*` `/` `%` `**` |
+| Concatenation | `"id-" ~ n` (string concat; coerces both sides) |
 | Comparison | `==` `!=` `<` `>` `<=` `>=` (strict: `1 == "1"` is `false`) |
 | Logical | `and` `&&` `or` `\|\|` `not` `!` (with short-circuiting) |
 | Membership | `"admin" in roles` (arrays: `includes`; strings: substring; objects: own keys only) |
@@ -92,7 +93,7 @@ const cached = expr => cache.get(expr) ?? cache.set(expr, compile(expr)).get(exp
 | Functions | `lower(name)`, resolved only from the registry you pass in |
 | Identifiers | letters, digits, `_`, and `$` / `@` (e.g. `$price`, `@.total`) |
 
-`==`/`!=` are strict (JS loose equality is a footgun). `?.` guards each step on its own, so chain it at every link that can be null: `a?.b?.c`. To keep the package tiny, xprsn leaves out string concatenation (`~`), `matches`, ranges (`..`), and bitwise operators.
+`==`/`!=` are strict (JS loose equality is a footgun). `~` joins its sides as strings (`1 ~ 2` is `"12"`) and binds looser than arithmetic but tighter than comparison, so `"total: " ~ a + b` joins the sum. `?.` guards each step on its own, so chain it at every link that can be null: `a?.b?.c`. To keep the package tiny, xprsn leaves out `matches`, ranges (`..`), and bitwise operators.
 
 `$` and `@` are ordinary identifier characters, so a variable can be named `$` or `@` (they still read through the same prototype guard). On their own they buy little, since xprsn reads from one flat values object. They pay off once a host stacks nested scopes.
 

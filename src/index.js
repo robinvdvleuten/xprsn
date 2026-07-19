@@ -11,7 +11,9 @@
 const TOKENS = /\d*\.?\d+(?:[eE][+-]?\d+)?|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[\w$@]+|\?\.(?!\d)|\?\?|[<>=!*]=|&&|\|\||\*\*|\S/g;
 
 // Binary operator precedence (higher binds tighter). `**` is right-associative.
-const PREC = { '??': 1, or: 2, '||': 2, and: 3, '&&': 3, '==': 4, '!=': 4, in: 5, '<': 6, '>': 6, '<=': 6, '>=': 6, '+': 7, '-': 7, '*': 8, '/': 8, '%': 8, '**': 9 };
+// `~` (string concat) sits below comparison and above `+`, so `"x: " ~ a + b`
+// joins the sum and `a ~ b == "12"` compares the joined string.
+const PREC = { '??': 1, or: 2, '||': 2, and: 3, '&&': 3, '==': 4, '!=': 4, in: 5, '<': 6, '>': 6, '<=': 6, '>=': 6, '~': 7, '+': 8, '-': 8, '*': 9, '/': 9, '%': 9, '**': 10 };
 
 // Shared parser state; parsing is synchronous so this is safe.
 let toks, i, fns, nm;
@@ -44,6 +46,7 @@ let apply = (op, a, b) =>
 	op === '/' ? a / b :
 	op === '%' ? a % b :
 	op === '**' ? a ** b :
+	op === '~' ? '' + a + b : // string concat, coerces both sides
 	op === '==' ? a === b :
 	op === '!=' ? a !== b :
 	op === '<' ? a < b :
