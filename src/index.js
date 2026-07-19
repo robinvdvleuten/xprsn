@@ -129,46 +129,30 @@ let primary = () => {
 	bad();
 };
 
+// One postfix step off base `o`. `key(v)` is the member key; `opt` (the `?.`
+// form) yields undefined on a nullish base instead of throwing, per step; a
+// truthy `args` makes it a method call bound to the base.
+let step = (o, key, opt, args) => v => {
+	let b = o(v);
+	if (opt && b == null) return undefined;
+	let m = get(b, key(v));
+	return args ? m.apply(b, args.map(a => a(v))) : m;
+};
+
 let postfix = () => {
 	let e = primary();
 	for (;;) {
-		if (eat('.')) {
+		let opt = eat('?.'), computed = eat('['), key;
+		if (computed) {
+			key = ternary();
+			expect(']');
+		} else if (opt || eat('.')) {
 			let k = toks[i++] ?? bad();
 			ID.test(k) || (i--, bad());
-			if (eat('(')) {
-				let args = list(')');
-				e = (o => v => {
-					let b = o(v);
-					return get(b, k).apply(b, args.map(a => a(v)));
-				})(e);
-			} else {
-				e = (o => v => get(o(v), k))(e);
-			}
-		} else if (eat('[')) {
-			let k = ternary();
-			expect(']');
-			e = (o => v => get(o(v), k(v)))(e);
-		} else if (eat('?.')) {
-			// Null-safe per step: a nullish base yields undefined instead of
-			// throwing. Chain `?.` at every link that can be nullish.
-			if (eat('[')) {
-				let k = ternary();
-				expect(']');
-				e = (o => v => { let b = o(v); return b == null ? undefined : get(b, k(v)); })(e);
-			} else {
-				let k = toks[i++] ?? bad();
-				ID.test(k) || (i--, bad());
-				if (eat('(')) {
-					let args = list(')');
-					e = (o => v => {
-						let b = o(v);
-						return b == null ? undefined : get(b, k).apply(b, args.map(a => a(v)));
-					})(e);
-				} else {
-					e = (o => v => { let b = o(v); return b == null ? undefined : get(b, k); })(e);
-				}
-			}
+			key = () => k;
 		} else return e;
+		// A trailing `(` is a method call, but not on a computed index.
+		e = step(e, key, opt, !computed && eat('(') ? list(')') : 0);
 	}
 };
 
