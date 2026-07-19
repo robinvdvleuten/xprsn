@@ -256,3 +256,49 @@ test('absent reads yield null', t => {
 	t.equal(evaluate('a.b', { a: { b: '' } }), '', 'present empty string is untouched');
 	t.end();
 });
+
+// A lambda `x => body` compiles to a function value; the host reducer calls it
+// per element. Reducers live in the registry — xprsn only supplies the per-item
+// function, so the host owns iteration and reset boundaries.
+const reducers = {
+	sum: (arr, f) => arr.reduce((s, x) => s + f(x), 0),
+	count: (arr, f) => arr.reduce((s, x) => s + (f(x) ? 1 : 0), 0),
+	any: (arr, f) => arr.some(x => f(x)),
+	map: (arr, f) => arr.map(x => f(x)),
+};
+const rows = [{ price: 2, qty: 3, status: 'paid' }, { price: 5, qty: 1, status: 'open' }];
+
+test('lambdas drive per-item computation over a collection', t => {
+	t.equal(evaluate('sum(orders, r => r.price * r.qty)', { orders: rows }, reducers), 11, 'aggregate');
+	t.equal(evaluate('count(orders, r => r.status == "paid")', { orders: rows }, reducers), 1, 'predicate count');
+	t.equal(evaluate('any(orders, r => r.qty > 2)', { orders: rows }, reducers), true, 'existential');
+	t.deepEqual(evaluate('map(orders, r => r.status == "paid" ? 1 : 0)', { orders: rows }, reducers), [1, 0], 'ternary body');
+	t.equal(evaluate('sum(orders, r => r.price)', { orders: [] }, reducers), 0, 'empty collection');
+	t.end();
+});
+
+test('lambda bodies close over outer scope', t => {
+	t.deepEqual(evaluate('map(orders, r => r.price * tax)', { orders: rows, tax: 10 }, reducers), [20, 50], 'free var from outer scope');
+	// Inner `sum` re-binds `n`; outer `r` still resolves through the child scope chain.
+	t.deepEqual(
+		evaluate('map(orders, r => sum(nums, n => n + r.qty))', { orders: rows, nums: [10, 20] }, reducers),
+		[36, 32],
+		'nested lambdas keep both bindings'
+	);
+	t.end();
+});
+
+test('a lambda param shadows outer variables and anchors', t => {
+	t.deepEqual(evaluate('map(orders, r => r.price)', { orders: rows, r: { price: 999 } }, reducers), [2, 5], 'param wins over an outer var');
+	t.deepEqual(evaluate('map(orders, r => r.price)', { orders: rows, '@': { price: 999 } }, reducers), [2, 5], 'param unaffected by the @ anchor');
+	t.end();
+});
+
+test('lambda params are excluded from names but reducers are reported', t => {
+	const f = compile('sum(orders, r => r.price * tax)', reducers);
+	t.deepEqual(f.names, ['orders', 'tax'], 'the param is not a free variable');
+	t.deepEqual(f.functions, ['sum'], 'the reducer is reported');
+	t.deepEqual(compile('map(a, x => map(b, y => x + y))', reducers).names, ['a', 'b'], 'nested params both drop out');
+	t.deepEqual(compile('r + sum(a, r => r)', reducers).names, ['r', 'a'], 'a same-named outer var still counts outside the lambda');
+	t.end();
+});

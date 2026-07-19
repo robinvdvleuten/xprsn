@@ -8,7 +8,7 @@
 // symbol. Identifiers include `$` and `@` so callers can use them as scope
 // anchors (e.g. `@` = current row, `$` = root) — they are ordinary variables.
 // `?.` must not swallow the `?` of a ternary before a bare decimal (`a ?.5 : b`).
-const TOKENS = /\d*\.?\d+(?:[eE][+-]?\d+)?|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[\w$@]+|\?\.(?!\d)|\?\?|[<>=!*]=|&&|\|\||\*\*|\S/g;
+const TOKENS = /\d*\.?\d+(?:[eE][+-]?\d+)?|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[\w$@]+|\?\.(?!\d)|\?\?|=>|[<>=!*]=|&&|\|\||\*\*|\S/g;
 
 // Binary operator precedence (higher binds tighter). `**` is right-associative.
 // `~` (string concat) sits below comparison and above `+`, so `"x: " ~ a + b`
@@ -185,7 +185,29 @@ let expr = (min = 1) => {
 	return l;
 };
 
+// Arrow lambda `x => body`, single param, no parens. Compiles to a function
+// VALUE the host passes to a registry reducer (e.g. `sum(rows, r => r.a)`),
+// which calls it once per element. The body is parser-compiled like any
+// expression, so every read still routes through get(); the param binds via a
+// child scope, not a new read path. Expression code cannot call the param
+// (calls resolve only from the registry) — a lambda is invoked by the host alone.
+let lambda = () => {
+	let n = toks[i];
+	i += 2; // param + `=>`
+	// bnd excludes the param from `names`; never mutate the shared EMPTY set.
+	if (bnd === EMPTY) bnd = new Set();
+	let had = bnd.has(n);
+	bnd.add(n);
+	let b = ternary();
+	had || bnd.delete(n);
+	// Child scope: computed `[n]` is always an own prop (safe even for
+	// `__proto__`/`constructor` — get() still blocks reading those), and the
+	// literal `__proto__: v` chains outer variables/anchors through for fallthrough.
+	return v => arg => b({ __proto__: v, [n]: arg });
+};
+
 let ternary = () => {
+	if (ID.test(toks[i] || '') && toks[i + 1] === '=>') return lambda();
 	let c = expr();
 	if (!eat('?')) return c;
 	if (eat(':')) {

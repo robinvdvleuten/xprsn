@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import test from 'tape';
-import { evaluate } from '../src/index.js';
+import { compile, evaluate } from '../src/index.js';
 
 test('prototype escape hatches are blocked', t => {
 	t.throws(() => evaluate('a.constructor', { a: {} }), TypeError);
@@ -55,6 +55,43 @@ test('null normalization does not relax the guards', t => {
 test('functions only resolve from the registry', t => {
 	t.throws(() => evaluate('toString()'), SyntaxError, 'inherited names are not functions');
 	t.throws(() => evaluate('boom()', { boom: () => 1 }), SyntaxError, 'values are not callable as functions');
+	t.end();
+});
+
+test('lambda values cannot reach the Function constructor', t => {
+	// Lambdas make function values first-class for the first time; every property
+	// hop still routes through the get() guard, so the escape stays closed.
+	t.throws(() => evaluate('(x => x).constructor'), TypeError, 'constructor blocked on a lambda value');
+	t.throws(() => evaluate('(x => x)["constructor"]'), TypeError, 'computed constructor blocked too');
+	t.throws(() => evaluate('(x => x).__proto__'), TypeError, '__proto__ (Function.prototype) blocked');
+	t.throws(() => evaluate('(x => x).prototype'), TypeError, 'prototype blocked');
+	// .call/.apply/.bind are readable but only re-invoke the safe closure; the
+	// pivot to Function still needs .constructor, which the next hop blocks.
+	t.throws(() => evaluate('(x => x).call.constructor'), TypeError, 'call chain terminates at the guard');
+	t.throws(() => evaluate('(x => x).bind.constructor'), TypeError, 'bind chain terminates at the guard');
+	const reducers = { map: (a, f) => a.map(x => f(x)) };
+	t.throws(
+		() => evaluate('map(rows, r => r.constructor.constructor("return 1"))', { rows: [{}] }, reducers),
+		TypeError,
+		'the classic escape is blocked inside a lambda body'
+	);
+	t.end();
+});
+
+test('a lambda param cannot be invoked as a function', t => {
+	// Calls resolve only from the registry, so a lambda is never self-callable —
+	// no Y-combinator, no expression-driven recursion.
+	const reducers = { map: (a, f) => a.map(x => f(x)) };
+	t.throws(() => compile('map(a, f => f(f))', reducers), SyntaxError, 'calling the param is a compile-time error');
+	t.end();
+});
+
+test('a param named for a blocked key stays inert', t => {
+	const reducers = { map: (a, f) => a.map(x => f(x)) };
+	const before = {}.polluted;
+	t.throws(() => evaluate('map(rows, __proto__ => __proto__.x)', { rows: [{ x: 1 }] }, reducers), TypeError, 'reading a __proto__ param is blocked');
+	t.throws(() => evaluate('map(rows, constructor => constructor.x)', { rows: [{ x: 1 }] }, reducers), TypeError, 'reading a constructor param is blocked');
+	t.equal({}.polluted, before, 'Object.prototype is untouched');
 	t.end();
 });
 

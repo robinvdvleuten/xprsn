@@ -98,6 +98,7 @@ const cached = expr => cache.get(expr) ?? cache.set(expr, compile(expr)).get(exp
 | Null-safe access | `user?.name`, `items?.[0]`, `name?.toUpperCase()` |
 | Method calls | `name.toUpperCase()`, `items.indexOf(2)` |
 | Functions | `lower(name)`, resolved only from the registry you pass in |
+| Lambdas | `sum(rows, r => r.price)` (single param; a per-item function for host reducers) |
 | Identifiers | letters, digits, `_`, and `$` / `@` (e.g. `$price`, `@.total`) |
 
 `==`/`!=` are strict (JS loose equality is a footgun). `~` joins its sides as strings (`1 ~ 2` is `"12"`) and binds looser than arithmetic but tighter than comparison, so `"total: " ~ a + b` joins the sum. Absence reads as `null`: an unknown variable or a missing property is `null` (not `undefined`), so `x == null` is the natural "is it there?" test; present `null`/`0`/`false`/`""` are untouched, and registry function return values are left as-is. Reading _through_ a null base still throws, so use `?.` for that — `a?.b` yields `null` on a nullish base and guards each step on its own, so chain it at every link that can be null: `a?.b?.c`. To keep the package tiny, xprsn leaves out `matches`, ranges (`..`), and bitwise operators.
@@ -134,6 +135,29 @@ run({ price: 60, qty: 2, shipping: 5 });
 
 Each step compiles once. The steps are plain data, so you can store them in a database or config file and let users edit the whole calculation.
 
+### Aggregates and per-item computation
+
+An expression computes a single value; walking a collection is the host's job. An arrow lambda `x => body` bridges the two. It compiles to a function value that a registry function calls once per element, so iteration stays in your code: the reducer decides how to combine the results and where to reset.
+
+```js
+const reducers = {
+  sum: (rows, f) => rows.reduce((total, row) => total + f(row), 0),
+};
+
+evaluate('sum(orders, order => order.price * order.qty)', {
+  orders: [{ price: 20, qty: 2 }, { price: 5, qty: 4 }],
+}, reducers);
+// => 60
+```
+
+A lambda takes one bare parameter (no parentheses) and its body is any expression. That body parses to closures like everything else, so every read still passes through the same guard. A lambda adds no route to code execution: `order => order.constructor` throws just as `x.constructor` does. The parameter binds in a child scope, so it shadows an outer variable of the same name and drops out of `names`:
+
+```js
+compile('sum(orders, r => r.price * tax)', reducers).names; // => ['orders', 'tax']
+```
+
+Because the reducers are yours, you decide what they do: `sum`, `count`, `avg`, `any`, `map`, or a running total that keeps state between calls. xprsn only hands each one a per-item function. It never iterates for you, and a lambda cannot call itself (`f => f(f)` is a compile-time error), so an expression can't recurse into an infinite loop.
+
 ## Content Security Policy
 
 This package works under a strict CSP such as:
@@ -153,6 +177,7 @@ Expressions can only read the data you pass in:
 - `in` on objects checks own properties only; inherited properties are not visible.
 - There are no assignment operators, so expressions cannot modify your data.
 - Functions resolve from the registry you provide, at compile time.
+- Lambdas (`r => r.price`) compile to function values, but an expression can't call one; only your registry functions can. Reads inside a lambda still go through the guard, so they open no route to `Function`.
 
 Expressions can still call methods on the values you expose (`user.delete()`, say, if you pass such an object), so only pass data you are comfortable handing over.
 

@@ -32,6 +32,7 @@ Parser state (`toks`, `i`, `fns`) is module-level and shared; parsing is synchro
 - Unknown function names and malformed input throw `SyntaxError` at compile time; null-base and blocked-key access throw `TypeError` at runtime.
 - Compiled functions expose `names`: the deduplicated free root variables of the expression (no property names, hash keys, or registry functions). Unknown variables do NOT throw — they evaluate to `null`; author-time validation is the caller's job via `names`.
 - There are no assignment operators — expressions must remain read-only.
+- Arrow lambdas `x => body` (single bare param, no parens) compile to a function **value** the host passes to a registry reducer, e.g. `sum(rows, r => r.price * r.qty)` — xprsn supplies the per-item function; the host owns iteration/reset. The body is parser-compiled like any expression (CSP intact), so every read still routes through `get()`. The param binds via a child scope (`{ __proto__: v, [n]: arg }`, a computed own-prop so a `__proto__`-named param can't reprototype it), reusing the `bnd` set so the param is excluded from `names` (`.functions` still lists reducers). Lambdas are **not self-callable** — a call resolves only from the registry, so `f => f(f)` is a compile-time `SyntaxError` (no recursion/DoS); only the host invokes a lambda. Function values are first-class here, but `constructor`/`__proto__`/`prototype` stay blocked at every hop, so `(x => x).constructor` and the like still throw.
 
 ## Conventions
 
