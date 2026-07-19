@@ -10,7 +10,8 @@ type Fn = (...args: any[]) => any;
  * The returned evaluator exposes `names` (the free variables the expression
  * reads) and `functions` (the registry functions it calls), both deduplicated.
  * Property names, hash keys, and method names are not included. Unknown
- * variables evaluate to `undefined`; validate them yourself via `names`.
+ * variables and missing properties evaluate to `null` (reading through a null
+ * base still throws); validate expected variables yourself via `names`.
  *
  * @param src The expression, e.g. `'user.age > 18 and "admin" in user.roles'`.
  * @param funcs Functions callable from the expression.

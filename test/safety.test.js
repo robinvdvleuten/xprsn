@@ -13,7 +13,7 @@ test('prototype escape hatches are blocked', t => {
 	t.throws(() => evaluate('@["__proto__"]', { '@': {} }), TypeError, 'the @ anchor does not bypass the guard');
 	t.throws(() => evaluate('a?.constructor', { a: {} }), TypeError, 'null-safe access is still guarded');
 	t.throws(() => evaluate('a?.["constructor"]', { a: {} }), TypeError);
-	t.equal(evaluate('a?.constructor', { a: null }), undefined, 'nullish base short-circuits before the key is touched');
+	t.equal(evaluate('a?.constructor', { a: null }), null, 'nullish base short-circuits before the key is touched');
 	t.throws(() => evaluate('__proto__', {}), TypeError);
 	t.throws(
 		() => evaluate('a.constructor.constructor("return 1")', { a: {} }),
@@ -40,7 +40,15 @@ test('in does not see inherited properties', t => {
 
 test('null-base access throws a readable error', t => {
 	t.throws(() => evaluate('a.b', { a: null }), /Cannot read "b" of null/);
-	t.throws(() => evaluate('a.b.c', {}), /Cannot read "b" of undefined/);
+	// `a` is absent, so it normalizes to null before the `.b` step reads through it.
+	t.throws(() => evaluate('a.b.c', {}), /Cannot read "b" of null/);
+	t.end();
+});
+
+test('null normalization does not relax the guards', t => {
+	t.throws(() => evaluate('a.constructor', { a: {} }), TypeError, 'prototype keys still blocked');
+	t.throws(() => evaluate('a.b', { a: null }), TypeError, 'reading through a null base still throws');
+	t.throws(() => evaluate('a.b.c', { a: {} }), TypeError, 'missing key becomes null, then reading through it throws');
 	t.end();
 });
 

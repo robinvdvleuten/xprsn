@@ -94,7 +94,7 @@ const cached = expr => cache.get(expr) ?? cache.set(expr, compile(expr)).get(exp
 | Functions | `lower(name)`, resolved only from the registry you pass in |
 | Identifiers | letters, digits, `_`, and `$` / `@` (e.g. `$price`, `@.total`) |
 
-`==`/`!=` are strict (JS loose equality is a footgun). `~` joins its sides as strings (`1 ~ 2` is `"12"`) and binds looser than arithmetic but tighter than comparison, so `"total: " ~ a + b` joins the sum. `?.` guards each step on its own, so chain it at every link that can be null: `a?.b?.c`. To keep the package tiny, xprsn leaves out `matches`, ranges (`..`), and bitwise operators.
+`==`/`!=` are strict (JS loose equality is a footgun). `~` joins its sides as strings (`1 ~ 2` is `"12"`) and binds looser than arithmetic but tighter than comparison, so `"total: " ~ a + b` joins the sum. Absence reads as `null`: an unknown variable or a missing property is `null` (not `undefined`), so `x == null` is the natural "is it there?" test; present `null`/`0`/`false`/`""` are untouched, and registry function return values are left as-is. Reading _through_ a null base still throws, so use `?.` for that — `a?.b` yields `null` on a nullish base and guards each step on its own, so chain it at every link that can be null: `a?.b?.c`. To keep the package tiny, xprsn leaves out `matches`, ranges (`..`), and bitwise operators.
 
 `$` and `@` are ordinary identifier characters, so a variable can be named `$` or `@` (they still read through the same prototype guard). On their own they buy little, since xprsn reads from one flat values object. They pay off once a host stacks nested scopes.
 

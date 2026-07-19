@@ -27,9 +27,10 @@ Parser state (`toks`, `i`, `fns`) is module-level and shared; parsing is synchro
 - `==`/`!=` compile to strict `===`/`!==` (documented, intentional).
 - `and`/`or`/`&&`/`||` and `??` short-circuit; `**` is right-associative; `??` has the lowest binary precedence.
 - `a ?: b` yields the condition's value when truthy, else `b`.
-- `?.` (also `?.[...]` and `?.m()`) yields `undefined` on a nullish base and guards per step, not per chain — `a?.b.c` still throws if `a` is null. The tokenizer must keep the `(?!\d)` lookahead so `a ?.5 : b` stays a ternary.
+- Absence normalizes to `null`: a missing key/variable reads as `null` (in `get()`), so `x == null` is the natural nothing-test. Present `null`/`0`/`false`/`""` pass through untouched; only reads are normalized — registry function return values are left as-is. Strict keys: reading _through_ a null base still throws (use `?.`).
+- `?.` (also `?.[...]` and `?.m()`) yields `null` on a nullish base and guards per step, not per chain — `a?.b.c` still throws if `a` is null. The tokenizer must keep the `(?!\d)` lookahead so `a ?.5 : b` stays a ternary.
 - Unknown function names and malformed input throw `SyntaxError` at compile time; null-base and blocked-key access throw `TypeError` at runtime.
-- Compiled functions expose `names`: the deduplicated free root variables of the expression (no property names, hash keys, or registry functions). Unknown variables do NOT throw — they evaluate to `undefined`; author-time validation is the caller's job via `names`.
+- Compiled functions expose `names`: the deduplicated free root variables of the expression (no property names, hash keys, or registry functions). Unknown variables do NOT throw — they evaluate to `null`; author-time validation is the caller's job via `names`.
 - There are no assignment operators — expressions must remain read-only.
 
 ## Conventions

@@ -30,7 +30,10 @@ let expect = t => eat(t) || bad();
 let get = (o, k) => {
 	if (o == null) throw TypeError('Cannot read "' + k + '" of ' + o);
 	if (k === '__proto__' || k === 'constructor' || k === 'prototype') throw TypeError('Cannot access "' + k + '"');
-	return o[k];
+	// Absence normalizes to null: a missing key or variable reads as null, so the
+	// natural `x == null` test works. Present null/0/false/"" pass through untouched.
+	let r = o[k];
+	return r === undefined ? null : r;
 };
 
 // String literal → value. Single-quoted strings normalize to JSON first.
@@ -130,11 +133,11 @@ let primary = () => {
 };
 
 // One postfix step off base `o`. `key(v)` is the member key; `opt` (the `?.`
-// form) yields undefined on a nullish base instead of throwing, per step; a
+// form) yields null on a nullish base instead of throwing, per step; a
 // truthy `args` makes it a method call bound to the base.
 let step = (o, key, opt, args) => v => {
 	let b = o(v);
-	if (opt && b == null) return undefined;
+	if (opt && b == null) return null;
 	let m = get(b, key(v));
 	return args ? m.apply(b, args.map(a => a(v))) : m;
 };
@@ -199,6 +202,10 @@ let ternary = () => {
  * reads, deduplicated. Property names, hash keys, and function names are not
  * included. It also exposes `functions`: the registry functions the expression
  * calls, deduplicated (method names like `s.trim()` are not included).
+ *
+ * Absent reads yield `null`: an unknown variable or a missing property reads as
+ * `null` (not undefined), so `x == null` tests hold. Reading through a null base
+ * still throws; registry function return values are untouched.
  *
  * @param {string} src The expression, e.g. `'user.age > 18 and "admin" in user.roles'`.
  * @param {Record<string, Function>} [funcs] Functions callable from the expression.

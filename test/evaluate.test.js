@@ -140,13 +140,13 @@ test('null coalescing', t => {
 });
 
 test('null-safe access', t => {
-	t.equal(evaluate('a?.b', { a: null }), undefined);
-	t.equal(evaluate('a?.b', {}), undefined, 'missing base');
+	t.equal(evaluate('a?.b', { a: null }), null);
+	t.equal(evaluate('a?.b', {}), null, 'missing base');
 	t.equal(evaluate('a?.b', { a: { b: 1 } }), 1);
-	t.equal(evaluate('a?.b?.c', { a: { b: null } }), undefined, 'chained');
-	t.equal(evaluate('a?.[0]', { a: null }), undefined, 'null-safe index');
+	t.equal(evaluate('a?.b?.c', { a: { b: null } }), null, 'chained');
+	t.equal(evaluate('a?.[0]', { a: null }), null, 'null-safe index');
 	t.equal(evaluate('a?.[i + 1]', { a: ['x', 'y'], i: 0 }), 'y');
-	t.equal(evaluate('a?.toUpperCase()', { a: null }), undefined, 'null-safe method call');
+	t.equal(evaluate('a?.toUpperCase()', { a: null }), null, 'null-safe method call');
 	t.equal(evaluate('a?.toUpperCase()', { a: 'hi' }), 'HI');
 	t.equal(evaluate('a?.b ?? "none"', { a: null }), 'none', 'pairs with ??');
 	t.throws(() => evaluate('a?.b.c', { a: null }), TypeError, 'safety is per step, not per chain');
@@ -228,8 +228,20 @@ test('$ and @ are identifier characters (scope anchors)', t => {
 	t.end();
 });
 
-test('missing values default to undefined', t => {
-	t.equal(evaluate('a', {}), undefined);
+test('missing values default to null', t => {
+	t.equal(evaluate('a', {}), null);
 	t.equal(compile('1 + 1')(), 2, 'values argument is optional');
+	t.end();
+});
+
+test('absent reads yield null', t => {
+	t.equal(evaluate('a', {}), null, 'missing variable');
+	t.equal(evaluate('a.b', { a: {} }), null, 'missing property');
+	t.equal(evaluate('a == null', {}), true, 'the natural nothing test holds');
+	t.equal(evaluate('a.b == null', { a: {} }), true, 'missing property is null');
+	t.equal(evaluate('a?.b', { a: null }), null, 'null-safe base');
+	t.equal(evaluate('a.b', { a: { b: 0 } }), 0, 'present falsy is untouched');
+	t.equal(evaluate('a.b', { a: { b: null } }), null, 'present null is untouched');
+	t.equal(evaluate('a.b', { a: { b: '' } }), '', 'present empty string is untouched');
 	t.end();
 });
