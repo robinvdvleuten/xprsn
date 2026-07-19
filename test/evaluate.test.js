@@ -205,6 +205,17 @@ test('compiled functions expose their free variables', t => {
 	t.end();
 });
 
+test('compiled functions expose the registry functions they call', t => {
+	const fns = { sum: x => x, avg: x => x, lower: s => s };
+	t.deepEqual(compile('sum(a)', fns).functions, ['sum']);
+	t.deepEqual(compile('sum(a) + avg(b)', fns).functions, ['sum', 'avg']);
+	t.deepEqual(compile('sum(a) + sum(b)', fns).functions, ['sum'], 'deduplicated');
+	t.deepEqual(compile('a + b').functions, [], 'no calls, no functions');
+	t.deepEqual(compile('s.trim()', {}).functions, [], 'method calls are not registry functions');
+	t.deepEqual(compile('lower(name) ~ "!"', fns).functions, ['lower'], 'nested in an expression');
+	t.end();
+});
+
 test('$ and @ are identifier characters (scope anchors)', t => {
 	t.equal(evaluate('@', { '@': 5 }), 5, '@ is a bare variable');
 	t.equal(evaluate('$', { $: 9 }), 9, '$ is a bare variable');

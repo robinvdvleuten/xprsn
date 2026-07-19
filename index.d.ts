@@ -56,8 +56,9 @@ type NamesArray<S extends string> =
  * Compile an expression once, evaluate it many times.
  *
  * The returned evaluator exposes `names`: the free variables the expression
- * reads, deduplicated. Function names, property names, and hash keys are not
- * included.
+ * reads, deduplicated. Property names, hash keys, and function names are not
+ * included. It also exposes `functions`: the registry functions the expression
+ * calls, deduplicated (method names are not included).
  *
  * @param src The expression, e.g. `'user.age > 18 and "admin" in user.roles'`.
  * @param funcs Functions callable from the expression.
@@ -66,7 +67,7 @@ type NamesArray<S extends string> =
 export function compile<S extends string>(
 	src: S,
 	funcs?: Record<string, (...args: any[]) => any>
-): { (values?: Values<S>): any; names: NamesArray<S> };
+): { (values?: Values<S>): any; names: NamesArray<S>; functions: string[] };
 
 /**
  * Compile and evaluate an expression in one go.

@@ -16,7 +16,8 @@ const TOKENS = /\d*\.?\d+(?:[eE][+-]?\d+)?|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[
 const PREC = { '??': 1, or: 2, '||': 2, and: 3, '&&': 3, '==': 4, '!=': 4, in: 5, '<': 6, '>': 6, '<=': 6, '>=': 6, '~': 7, '+': 8, '-': 8, '*': 9, '/': 9, '%': 9, '**': 10 };
 
 // Shared parser state; parsing is synchronous so this is safe.
-let toks, i, fns, nm;
+// `nm` collects free variables, `fnm` the registry functions actually called.
+let toks, i, fns, nm, fnm;
 
 let err = msg => { throw SyntaxError(msg) };
 let bad = () => err('Unexpected ' + (toks[i] ?? 'end of expression'));
@@ -116,6 +117,7 @@ let primary = () => {
 		if (eat('(')) {
 			// Functions resolve at compile time, only from the registry.
 			Object.hasOwn(fns, t) || err(t + ' is not a function');
+			fnm.add(t);
 			let fn = fns[t], args = list(')');
 			return v => fn(...args.map(e => e(v)));
 		}
@@ -210,12 +212,13 @@ let ternary = () => {
  * Compile an expression once, evaluate it many times.
  *
  * The returned evaluator exposes `names`: the free variables the expression
- * reads, deduplicated. Function names, property names, and hash keys are not
- * included.
+ * reads, deduplicated. Property names, hash keys, and function names are not
+ * included. It also exposes `functions`: the registry functions the expression
+ * calls, deduplicated (method names like `s.trim()` are not included).
  *
  * @param {string} src The expression, e.g. `'user.age > 18 and "admin" in user.roles'`.
  * @param {Record<string, Function>} [funcs] Functions callable from the expression.
- * @returns {{(values?: Record<string, any>): any, names: string[]}} Evaluator for the compiled expression.
+ * @returns {{(values?: Record<string, any>): any, names: string[], functions: string[]}} Evaluator for the compiled expression.
  * @throws {SyntaxError} On malformed input or unknown function names.
  */
 export function compile(src, funcs) {
@@ -223,12 +226,14 @@ export function compile(src, funcs) {
 	i = 0;
 	fns = funcs || {};
 	nm = new Set();
+	fnm = new Set();
 	let e = toks.length ? ternary() : bad();
 	i < toks.length && bad();
 	let f = v => e(v || {});
 	// Array.from, not a spread: the bundler's transpile turns `[...set]` into
 	// `[].concat(set)`, which wraps the Set instead of unpacking it.
 	f.names = Array.from(nm);
+	f.functions = Array.from(fnm);
 	return f;
 }
 

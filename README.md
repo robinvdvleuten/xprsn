@@ -62,6 +62,15 @@ fn({ usr: { age: 30 } });
 //   ^^^ error: 'usr' does not exist in type '{ user?: any }'
 ```
 
+The evaluator also exposes `functions`: the registry functions the expression calls (methods like `s.trim()` are not counted).
+
+```js
+const fn = compile('sum(price) > budget', { sum: xs => xs.reduce((a, b) => a + b, 0) });
+fn.functions; // => ['sum']
+```
+
+Unknown functions already throw at compile time, so this is for introspection rather than safety: check a stored expression against the functions available in its context before running it, for example rejecting an aggregate like `sum(...)` where no row group is in scope. Like `names`, it works on dynamic strings, which the type-level inference above cannot see.
+
 ### `evaluate(expression, values?, functions?)`
 
 Shorthand for `compile(expression, functions)(values)`.

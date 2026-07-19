@@ -19,6 +19,9 @@ roles({ user: {}, name: 'x' });
 const calc = compile('fmt(price)', { fmt: (n: number) => String(n) });
 calc({ price: 4.5 });
 
+// `functions` lists the registry functions called (runtime introspection)
+const called: string[] = calc.functions;
+
 // dynamic strings degrade to Record<string, any>
 declare const dyn: string;
 evaluate(dyn, { anything: 1, at: 'all' });
