@@ -4,7 +4,7 @@ Tiny, CSP-safe expression language for JavaScript. Zero runtime dependencies, pl
 
 ## Commands
 
-- `npm test` — tape suites under `node --disallow-code-generation-from-strings` (strict-CSP simulation), then `npm run typecheck` (type-level assertions in `test/types.check.ts`).
+- `npm test` — tape suites under `node --disallow-code-generation-from-strings` (strict-CSP simulation), then `npm run typecheck` (a smoke check that `index.d.ts` is usable, in `test/types.check.ts`).
 - `npm run build` — microbundle → `dist/` (ESM/CJS/UMD) + `index.d.ts` generated from JSDoc. Prints min+gzip sizes.
 - Run a single suite: `npx tape test/evaluate.test.js`
 
@@ -36,4 +36,4 @@ Parser state (`toks`, `i`, `fns`) is module-level and shared; parsing is synchro
 - Tabs for indentation. Comments only where the code can't speak (safety rationale, non-obvious tricks).
 - Tests are tape, in `test/*.test.js`, run directly against `src/` (no build needed). New syntax or guards need tests in the matching suite (`evaluate`, `safety`, or `errors`).
 - Do not mention Symfony in code, comments, or docs.
-- `dist/` is gitignored build output. `index.d.ts` is **hand-written** (microbundle type generation is off via `--generateTypes false`): template-literal types parse the expression at the type level so `fn.names` and the values parameter are inferred from literal expression strings. Its `Scan`/`Add` type lexer must stay in sync with the runtime tokenizer — `test/types.check.ts` (run by `npm run typecheck`, part of `npm test`) guards that. New syntax that affects which words count as variables needs updates in both places.
+- `dist/` is gitignored build output. `index.d.ts` is **hand-written** (microbundle type generation is off via `--generateTypes false`) and kept deliberately plain: two function signatures, `values` typed as `Record<string, any>`, `names`/`functions` as `string[]`. No expression-level type inference — that machinery was dropped as too heavy for the value. `test/types.check.ts` (run by `npm run typecheck`, part of `npm test`) is just a smoke check that the declarations are callable.

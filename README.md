@@ -54,14 +54,6 @@ fn.names; // => ['user', 'discount']
 
 That one array covers a lot of ground when expressions come from your users: validate a rule against your schema before saving it (`fn.names.every(n => n in schema)`), drive autocomplete in a rule editor, or find which stored rules read a field you're about to rename. It also pairs with the multi-step pattern below, where each step's `names` are its dependencies.
 
-TypeScript users get the same check at compile time: when the expression is a string literal, `names` is inferred as a literal union and the values parameter is typed from it, so a typo'd key is a type error before anything runs.
-
-```ts
-const fn = compile('user.age > 18');
-fn({ usr: { age: 30 } });
-//   ^^^ error: 'usr' does not exist in type '{ user?: any }'
-```
-
 The evaluator also exposes `functions`: the registry functions the expression calls (methods like `s.trim()` are not counted).
 
 ```js
@@ -69,7 +61,7 @@ const fn = compile('sum(price) > budget', { sum: xs => xs.reduce((a, b) => a + b
 fn.functions; // => ['sum']
 ```
 
-Unknown functions already throw at compile time, so this is for introspection rather than safety: check a stored expression against the functions available in its context before running it, for example rejecting an aggregate like `sum(...)` where no row group is in scope. Like `names`, it works on dynamic strings, which the type-level inference above cannot see.
+Unknown functions already throw at compile time, so this is for introspection rather than safety: check a stored expression against the functions available in its context before running it, for example rejecting an aggregate like `sum(...)` where no row group is in scope.
 
 ### `evaluate(expression, values?, functions?)`
 
