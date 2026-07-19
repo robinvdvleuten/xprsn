@@ -26,6 +26,11 @@ evaluate(dyn, { anything: 1, at: 'all' });
 // numbers, ?., ?? and ternary decimals don't confuse the scanner
 compile('a ?.5 : 1e3')({ a: true });
 
+// $ and @ are identifier characters (scope anchors)
+const anchored = compile('@.price * $.rate');
+anchored({ '@': { price: 2 }, '$': { rate: 1.1 } });
+const anchorNames: ('@' | '$')[] = anchored.names;
+
 // --- errors: typo'd or unknown keys in object literals ---
 
 // @ts-expect-error `usr` is not a variable of the expression
@@ -45,3 +50,6 @@ const wrong: 'x'[] = fn.names;
 
 // @ts-expect-error evaluate checks too
 evaluate('a + b', { a: 1, c: 2 });
+
+// @ts-expect-error anchor names are exact
+const wrongAnchors: '@'[] = anchored.names;

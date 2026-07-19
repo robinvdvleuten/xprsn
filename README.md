@@ -90,8 +90,18 @@ const cached = expr => cache.get(expr) ?? cache.set(expr, compile(expr)).get(exp
 | Null-safe access | `user?.name`, `items?.[0]`, `name?.toUpperCase()` |
 | Method calls | `name.toUpperCase()`, `items.indexOf(2)` |
 | Functions | `lower(name)`, resolved only from the registry you pass in |
+| Identifiers | letters, digits, `_`, and `$` / `@` (e.g. `$price`, `@.total`) |
 
 `==`/`!=` are strict (JS loose equality is a footgun). `?.` guards each step on its own, so chain it at every link that can be null: `a?.b?.c`. To keep the package tiny, xprsn leaves out string concatenation (`~`), `matches`, ranges (`..`), and bitwise operators.
+
+`$` and `@` are ordinary identifier characters, so a variable can be named `$` or `@` (they still read through the same prototype guard). On their own they buy little, since xprsn reads from one flat values object. They pay off once a host stacks nested scopes.
+
+[sjabloon](https://github.com/robinvdvleuten/sjabloon), the template engine built on xprsn, is the concrete case. It layers a fresh child scope on every `{{#each}}` iteration with `Object.create`, so a loop variable and the surrounding variables coexist and an inner name shadows an outer one of the same name. In that setting a plain name always resolves to the nearest scope. Binding `$` and `@` gives an expression a fixed handle on a chosen level instead: set `@` to the current item and `$` to the root, and `@.price * $.taxRate` says exactly which scope each name comes from.
+
+```js
+evaluate('@.price * $.taxRate', { '@': { price: 20 }, '$': { taxRate: 1.21 } });
+// => 24.2
+```
 
 ### Multi-step expressions
 

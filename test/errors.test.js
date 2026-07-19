@@ -14,7 +14,7 @@ test('syntax errors', t => {
 	t.throws(() => compile('a ??'), /Unexpected end of expression/);
 	t.throws(() => compile('a?.'), SyntaxError);
 	t.throws(() => compile('a?.[1'), SyntaxError);
-	t.throws(() => compile('@'), /Unexpected @/);
+	t.throws(() => compile('#'), /Unexpected #/, '# is not an identifier char');
 	t.end();
 });
 

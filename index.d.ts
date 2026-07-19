@@ -12,7 +12,7 @@
 type L = 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'g' | 'h' | 'i' | 'j' | 'k' | 'l' | 'm'
 	| 'n' | 'o' | 'p' | 'q' | 'r' | 's' | 't' | 'u' | 'v' | 'w' | 'x' | 'y' | 'z';
 type D = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9';
-type IdChar = L | Uppercase<L> | D | '_';
+type IdChar = L | Uppercase<L> | D | '_' | '$' | '@';
 type WS = ' ' | '\t' | '\n' | '\r';
 type Keyword = 'and' | 'or' | 'not' | 'in' | 'true' | 'false' | 'null';
 

@@ -9,6 +9,8 @@ test('prototype escape hatches are blocked', t => {
 	t.throws(() => evaluate('a.__proto__', { a: {} }), TypeError);
 	t.throws(() => evaluate('a.prototype', { a: () => {} }), TypeError);
 	t.throws(() => evaluate('constructor', {}), TypeError, 'bare variable lookup is guarded too');
+	t.throws(() => evaluate('$.constructor', { $: {} }), TypeError, 'the $ anchor does not bypass the guard');
+	t.throws(() => evaluate('@["__proto__"]', { '@': {} }), TypeError, 'the @ anchor does not bypass the guard');
 	t.throws(() => evaluate('a?.constructor', { a: {} }), TypeError, 'null-safe access is still guarded');
 	t.throws(() => evaluate('a?.["constructor"]', { a: {} }), TypeError);
 	t.equal(evaluate('a?.constructor', { a: null }), undefined, 'nullish base short-circuits before the key is touched');

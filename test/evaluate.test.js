@@ -193,6 +193,18 @@ test('compiled functions expose their free variables', t => {
 	t.end();
 });
 
+test('$ and @ are identifier characters (scope anchors)', t => {
+	t.equal(evaluate('@', { '@': 5 }), 5, '@ is a bare variable');
+	t.equal(evaluate('$', { $: 9 }), 9, '$ is a bare variable');
+	t.equal(evaluate('@.price', { '@': { price: 7 } }), 7, '@ as a scope root');
+	t.equal(evaluate('$.total', { $: { total: 100 } }), 100, '$ as a scope root');
+	t.equal(evaluate('@.price * qty', { '@': { price: 4 }, qty: 3 }), 12, 'anchors mix with bare names');
+	t.equal(evaluate('$.rate * @.amount', { $: { rate: 1.1 }, '@': { amount: 10 } }), 11, 'both anchors');
+	t.equal(evaluate('$foo + a$b', { $foo: 2, a$b: 3 }), 5, '$ and @ work mid-identifier too');
+	t.deepEqual(compile('@.price * $.rate').names, ['@', '$'], 'anchors are reported as free variables');
+	t.end();
+});
+
 test('missing values default to undefined', t => {
 	t.equal(evaluate('a', {}), undefined);
 	t.equal(compile('1 + 1')(), 2, 'values argument is optional');

@@ -4,9 +4,11 @@
  * so no string-to-code construct is ever used and strict CSP is satisfied.
  */
 
-// Tokenizer: numbers, strings, words, multi-char operators, any other symbol.
+// Tokenizer: numbers, strings, identifiers, multi-char operators, any other
+// symbol. Identifiers include `$` and `@` so callers can use them as scope
+// anchors (e.g. `@` = current row, `$` = root) — they are ordinary variables.
 // `?.` must not swallow the `?` of a ternary before a bare decimal (`a ?.5 : b`).
-const TOKENS = /\d*\.?\d+(?:[eE][+-]?\d+)?|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|\w+|\?\.(?!\d)|\?\?|[<>=!*]=|&&|\|\||\*\*|\S/g;
+const TOKENS = /\d*\.?\d+(?:[eE][+-]?\d+)?|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[\w$@]+|\?\.(?!\d)|\?\?|[<>=!*]=|&&|\|\||\*\*|\S/g;
 
 // Binary operator precedence (higher binds tighter). `**` is right-associative.
 const PREC = { '??': 1, or: 2, '||': 2, and: 3, '&&': 3, '==': 4, '!=': 4, in: 5, '<': 6, '>': 6, '<=': 6, '>=': 6, '+': 7, '-': 7, '*': 8, '/': 8, '%': 8, '**': 9 };
@@ -30,6 +32,10 @@ let get = (o, k) => {
 
 // String literal → value. Single-quoted strings normalize to JSON first.
 let str = t => JSON.parse(t[0] === '"' ? t : '"' + t.slice(1, -1).replace(/\\'/g, "'").replace(/"/g, '\\"') + '"');
+
+// Identifier start (also a valid property name): letters, `_`, and the `$`/`@`
+// scope anchors. Property keys still route through the get() guard.
+let ID = /^[A-Za-z_$@]/;
 
 let apply = (op, a, b) =>
 	op === '+' ? a + b :
@@ -75,7 +81,7 @@ let primary = () => {
 		if (!eat('}')) {
 			do {
 				let k = toks[i++] ?? bad();
-				k = /^["']/.test(k) ? str(k) : /^[\w.]/.test(k) ? k : (i--, bad());
+				k = /^["']/.test(k) ? str(k) : /^[\w.$@]/.test(k) ? k : (i--, bad());
 				expect(':');
 				pairs.push([k, ternary()]);
 			} while (eat(','));
@@ -103,7 +109,7 @@ let primary = () => {
 	if (t === 'false') return () => !1;
 	if (t === 'null') return () => null;
 
-	if (/^[A-Za-z_]/.test(t)) {
+	if (ID.test(t)) {
 		if (eat('(')) {
 			// Functions resolve at compile time, only from the registry.
 			Object.hasOwn(fns, t) || err(t + ' is not a function');
@@ -123,7 +129,7 @@ let postfix = () => {
 	for (;;) {
 		if (eat('.')) {
 			let k = toks[i++] ?? bad();
-			/^[A-Za-z_]/.test(k) || (i--, bad());
+			ID.test(k) || (i--, bad());
 			if (eat('(')) {
 				let args = list(')');
 				e = (o => v => {
@@ -146,7 +152,7 @@ let postfix = () => {
 				e = (o => v => { let b = o(v); return b == null ? undefined : get(b, k(v)); })(e);
 			} else {
 				let k = toks[i++] ?? bad();
-				/^[A-Za-z_]/.test(k) || (i--, bad());
+				ID.test(k) || (i--, bad());
 				if (eat('(')) {
 					let args = list(')');
 					e = (o => v => {
