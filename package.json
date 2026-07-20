@@ -39,6 +39,15 @@
 	"scripts": {
 		"bench": "node bench/index.js",
 		"build": "tsdown",
+		"fuzz": "npm run fuzz:prepare && run-s fuzz:compile fuzz:evaluate fuzz:structured",
+		"fuzz:prepare": "node -e \"for (const x of ['compile','evaluate','structured']) require('fs').mkdirSync('.fuzz-corpus/'+x,{recursive:true})\"",
+		"fuzz:compile": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/compile.fuzz.js -i src/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync .fuzz-corpus/compile fuzz/corpus/compile -- -max_total_time=60 -use_value_profile=1 -dict=fuzz/xprsn.dict -artifact_prefix=fuzz/",
+		"fuzz:evaluate": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/evaluate.fuzz.js -i src/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync .fuzz-corpus/evaluate fuzz/corpus/evaluate -- -max_total_time=60 -use_value_profile=1 -dict=fuzz/xprsn.dict -artifact_prefix=fuzz/",
+		"fuzz:structured": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/structured.fuzz.js -i src/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync .fuzz-corpus/structured fuzz/corpus/structured -- -max_total_time=60 -use_value_profile=1 -dict=fuzz/xprsn.dict -artifact_prefix=fuzz/",
+		"fuzz:regression": "run-s fuzz:regression:compile fuzz:regression:evaluate fuzz:regression:structured",
+		"fuzz:regression:compile": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/compile.fuzz.js -i src/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync --mode=regression fuzz/corpus/compile -- -artifact_prefix=fuzz/",
+		"fuzz:regression:evaluate": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/evaluate.fuzz.js -i src/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync --mode=regression fuzz/corpus/evaluate -- -artifact_prefix=fuzz/",
+		"fuzz:regression:structured": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/structured.fuzz.js -i src/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync --mode=regression fuzz/corpus/structured -- -artifact_prefix=fuzz/",
 		"prepublishOnly": "npm run build",
 		"size": "size-limit",
 		"test": "node --disallow-code-generation-from-strings node_modules/tape/bin/tape test/*.test.js && npm run typecheck",
@@ -52,7 +61,10 @@
 		"evaluate"
 	],
 	"devDependencies": {
+		"@jazzer.js/bug-detectors": "^4.0.0",
+		"@jazzer.js/core": "^4.0.0",
 		"@size-limit/file": "^12.1.0",
+		"npm-run-all": "^4.1.5",
 		"size-limit": "^12.1.0",
 		"tape": "^5.9.0",
 		"tsdown": "^0.22.12",

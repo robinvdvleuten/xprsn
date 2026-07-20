@@ -9,6 +9,7 @@ Tiny, CSP-safe expression language for JavaScript. Zero runtime dependencies, pl
 - `npm run size` — size-limit checks the gzip size of `dist/index.js` and `dist/index.cjs` against the budgets in `package.json`.
 - Run a single suite: `npx tape test/evaluate.test.js`
 - `npm run bench` — zero-dependency micro-benchmarks in `bench/`, run against `src/`. Measures compile (parse) and evaluate throughput separately, since the design is compile-once, evaluate-many. `bench/` is not in `files`, so it is never published.
+- `npm run fuzz` — jazzer.js fuzz targets in `fuzz/` (compile / evaluate / structured), against `src/`, 60s each. `npm run fuzz:regression` deterministically replays the minimized committed corpus (CI-safe, used by `.github/workflows/fuzz.yml`). Nightly discovery restores and updates a private GitHub Actions corpus cache. The structured target asserts the real safety properties — no prototype pollution, blocked-key reads throw, deterministic eval — not just "doesn't crash". `fuzz/` is not in `files`, so it is never published.
 
 ## Architecture
 
@@ -38,6 +39,6 @@ Parser state (`toks`, `i`, `fns`) is module-level and shared; parsing is synchro
 ## Conventions
 
 - Tabs for indentation. Comments only where the code can't speak (safety rationale, non-obvious tricks).
-- Tests are tape, in `test/*.test.js`, run directly against `src/` (no build needed). New syntax or guards need tests in the matching suite (`evaluate`, `safety`, or `errors`).
+- Tests are tape, in `test/*.test.js`, run directly against `src/` (no build needed). New syntax or guards need tests in the matching suite (`evaluate`, `safety`, or `errors`). A new syntax form or safety guard should also be reflected in the structured fuzz generator (`fuzz/structured.fuzz.js`) so the fuzzer keeps exercising it.
 - Do not mention Symfony in code, comments, or docs.
 - `dist/` is gitignored build output. `index.d.ts` is **hand-written** (bundler type generation is off via `dts: false` in `tsdown.config.js`) and kept deliberately plain: two function signatures, `values` typed as `Record<string, any>`, `names`/`functions` as `string[]`. No expression-level type inference — that machinery was dropped as too heavy for the value. `test/types.check.ts` (run by `npm run typecheck`, part of `npm test`) is just a smoke check that the declarations are callable.
