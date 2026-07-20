@@ -1,2 +1,11 @@
-node_modules/
 dist/
+fuzz/corpus/*/*
+!fuzz/corpus/*/seed-*.txt
+node_modules/
+
+# libFuzzer artifacts — written under fuzz/ via -artifact_prefix=fuzz/
+fuzz/crash-*
+fuzz/leak-*
+fuzz/oom-*
+fuzz/slow-unit-*
+fuzz/timeout-*
