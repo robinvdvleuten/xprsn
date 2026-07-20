@@ -1,5 +1,5 @@
 /**
- * Hand-written declarations — microbundle type generation is disabled.
+ * Hand-written declarations — bundler type generation is disabled.
  */
 
 type Fn = (...args: any[]) => any;
