@@ -1,6 +1,6 @@
 # xprsn
 
-A tiny, CSP-safe expression language for JavaScript. **~1.2KB min+gzip, zero dependencies.**
+A tiny, CSP-safe expression language for JavaScript. **~1.3KB min+gzip, zero dependencies.**
 
 [![NPM version](https://img.shields.io/npm/v/xprsn.svg)](https://www.npmjs.com/package/xprsn)
 [![Build Status](https://github.com/robinvdvleuten/xprsn/actions/workflows/test.yml/badge.svg)](https://github.com/robinvdvleuten/xprsn/actions/workflows/test.yml)

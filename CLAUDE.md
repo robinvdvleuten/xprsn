@@ -5,7 +5,8 @@ Tiny, CSP-safe expression language for JavaScript. Zero runtime dependencies, pl
 ## Commands
 
 - `npm test` — tape suites under `node --disallow-code-generation-from-strings` (strict-CSP simulation), then `npm run typecheck` (a smoke check that `index.d.ts` is usable, in `test/types.check.ts`).
-- `npm run build` — microbundle → `dist/` (ESM/CJS/UMD) + `index.d.ts` generated from JSDoc. Prints min+gzip sizes.
+- `npm run build` — tsdown (rolldown + oxc), configured in `tsdown.config.js` → `dist/` (ESM/CJS). Type generation is off; `index.d.ts` is hand-written.
+- `npm run size` — size-limit checks the gzip size of `dist/index.js` and `dist/index.cjs` against the budgets in `package.json`.
 - Run a single suite: `npx tape test/evaluate.test.js`
 - `npm run bench` — zero-dependency micro-benchmarks in `bench/`, run against `src/`. Measures compile (parse) and evaluate throughput separately, since the design is compile-once, evaluate-many. `bench/` is not in `files`, so it is never published.
 
@@ -39,4 +40,4 @@ Parser state (`toks`, `i`, `fns`) is module-level and shared; parsing is synchro
 - Tabs for indentation. Comments only where the code can't speak (safety rationale, non-obvious tricks).
 - Tests are tape, in `test/*.test.js`, run directly against `src/` (no build needed). New syntax or guards need tests in the matching suite (`evaluate`, `safety`, or `errors`).
 - Do not mention Symfony in code, comments, or docs.
-- `dist/` is gitignored build output. `index.d.ts` is **hand-written** (microbundle type generation is off via `--generateTypes false`) and kept deliberately plain: two function signatures, `values` typed as `Record<string, any>`, `names`/`functions` as `string[]`. No expression-level type inference — that machinery was dropped as too heavy for the value. `test/types.check.ts` (run by `npm run typecheck`, part of `npm test`) is just a smoke check that the declarations are callable.
+- `dist/` is gitignored build output. `index.d.ts` is **hand-written** (bundler type generation is off via `dts: false` in `tsdown.config.js`) and kept deliberately plain: two function signatures, `values` typed as `Record<string, any>`, `names`/`functions` as `string[]`. No expression-level type inference — that machinery was dropped as too heavy for the value. `test/types.check.ts` (run by `npm run typecheck`, part of `npm test`) is just a smoke check that the declarations are callable.
