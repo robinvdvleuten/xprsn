@@ -250,7 +250,11 @@ export function compile(src, funcs, opts) {
 	nm = new Set();
 	fnm = new Set();
 	bnd = opts && opts.bound ? new Set(opts.bound) : EMPTY;
-	let e = toks.length ? ternary() : bad();
+	// Deeply nested input overflows the recursive-descent parser; surface that as
+	// a SyntaxError so malformed input keeps its documented compile-time contract.
+	let e;
+	try { e = toks.length ? ternary() : bad(); }
+	catch (x) { throw x instanceof RangeError ? SyntaxError('Expression too deeply nested') : x }
 	i < toks.length && bad();
 	let f = v => e(v || {});
 	// Array.from, not a spread: the bundler's transpile turns `[...set]` into

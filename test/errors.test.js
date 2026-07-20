@@ -38,3 +38,15 @@ test('non-string input is coerced', t => {
 	t.equal(evaluate(42), 42, 'numbers stringify fine');
 	t.end();
 });
+
+test('deeply nested input throws SyntaxError, not RangeError', t => {
+	const deep = '('.repeat(50000) + '1' + ')'.repeat(50000);
+	try {
+		compile(deep);
+		t.fail('should have thrown');
+	} catch (e) {
+		t.ok(e instanceof SyntaxError, 'stack overflow surfaces as SyntaxError');
+		t.notOk(e instanceof RangeError, 'not a raw RangeError');
+	}
+	t.end();
+});
