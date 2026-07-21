@@ -15,6 +15,9 @@ test('syntax errors', t => {
 	t.throws(() => compile('a?.'), SyntaxError);
 	t.throws(() => compile('a?.[1'), SyntaxError);
 	t.throws(() => compile('#'), /Unexpected #/, '# is not an identifier char');
+	t.throws(() => compile("'abc"), SyntaxError, 'unterminated single-quoted string');
+	t.throws(() => compile('"abc'), SyntaxError, 'unterminated double-quoted string');
+	t.throws(() => compile(String.raw`'\x41'`), SyntaxError, 'non-JSON escape');
 	t.end();
 });
 

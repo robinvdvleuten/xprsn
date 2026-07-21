@@ -4,11 +4,18 @@
  * so no string-to-code construct is ever used and strict CSP is satisfied.
  */
 
-// Tokenizer: numbers, strings, identifiers, multi-char operators, any other
-// symbol. Identifiers include `$` and `@` so callers can use them as scope
-// anchors (e.g. `@` = current row, `$` = root) — they are ordinary variables.
-// `?.` must not swallow the `?` of a ternary before a bare decimal (`a ?.5 : b`).
-const TOKENS = /\d*\.?\d+(?:[eE][+-]?\d+)?|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[\w$@]+|\?\.(?!\d)|\?\?|=>|[<>=!*]=|&&|\|\||\*\*|\S/g;
+// Sticky matching prevents a failed string from restarting at every later quote.
+// `?.` must not swallow the `?` of a ternary before a bare decimal.
+const TOKEN = /\s+|\d*\.?\d+(?:[eE][+-]?\d+)?|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[\w$@]+|\?\.(?!\d)|\?\?|=>|[<>=!*]=|&&|\|\||\*\*|\S/y;
+let lex = s => {
+	let out = [], t;
+	for (TOKEN.lastIndex = 0; TOKEN.lastIndex < s.length; ) {
+		t = TOKEN.exec(s)[0];
+		(t !== '"' && t !== "'") || err();
+		t.trim() && out.push(t);
+	}
+	return out;
+};
 
 // Binary operator precedence (higher binds tighter). `**` is right-associative.
 // `~` (string concat) sits below comparison and above `+`, so `"x: " ~ a + b`
@@ -41,7 +48,8 @@ let get = (o, k) => {
 };
 
 // String literal → value. Single-quoted strings normalize to JSON first.
-let str = t => JSON.parse(t[0] === '"' ? t : '"' + t.slice(1, -1).replace(/\\'/g, "'").replace(/"/g, '\\"') + '"');
+let str = t => JSON.parse(t[0] === '"' ? t : '"' + t.slice(1, -1)
+	.replace(/\\.|"/g, c => c === "\\'" ? "'" : c === '"' ? '\\"' : c) + '"');
 
 // Identifier start (also a valid property name): letters, `_`, and the `$`/`@`
 // scope anchors. Property keys still route through the get() guard.
@@ -244,7 +252,7 @@ let ternary = () => {
  * @throws {SyntaxError} On malformed input or unknown function names.
  */
 export function compile(src, funcs, opts) {
-	toks = String(src).match(TOKENS) || [];
+	toks = lex(String(src));
 	i = 0;
 	fns = funcs || {};
 	nm = new Set();

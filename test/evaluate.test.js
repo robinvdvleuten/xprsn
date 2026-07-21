@@ -11,6 +11,10 @@ test('literals', t => {
 	t.equal(evaluate('"it\\"s"'), 'it"s');
 	t.equal(evaluate("'it\\'s'"), "it's");
 	t.equal(evaluate('"line\\nbreak"'), 'line\nbreak');
+	t.equal(evaluate(String.raw`'a\"b'`), 'a"b', 'double-quote escape survives single-quote normalization');
+	t.equal(evaluate(String.raw`'a\\b'`), 'a\\b', 'escaped backslash survives single-quote normalization');
+	t.equal(evaluate(String.raw`'\\\''`), "\\'", 'backslash before an escaped apostrophe');
+	t.equal(evaluate(String.raw`'\n\t\u0041'`), '\n\tA', 'JSON control and Unicode escapes');
 	t.equal(evaluate('true'), true);
 	t.equal(evaluate('false'), false);
 	t.equal(evaluate('null'), null);
@@ -112,6 +116,7 @@ test('hashes', t => {
 	t.deepEqual({ ...evaluate('{"a": 1, "b": 2}') }, { a: 1, b: 2 });
 	t.deepEqual({ ...evaluate('{a: 1}') }, { a: 1 }, 'bare-word keys');
 	t.deepEqual({ ...evaluate("{'a': 1}") }, { a: 1 }, 'single-quoted keys');
+	t.equal(evaluate(String.raw`{'a\"b': 1}`)['a"b'], 1, 'escaped single-quoted key');
 	t.equal(evaluate('{a: 1 + 1}.a'), 2);
 	t.deepEqual({ ...evaluate('{}') }, {});
 	t.end();

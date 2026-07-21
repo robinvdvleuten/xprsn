@@ -79,7 +79,7 @@ function buildExpr(data, depth) {
 		return KEYS[data.consumeIntegralInRange(0, KEYS.length - 1)];
 	}
 
-	const kind = data.consumeIntegralInRange(0, 11);
+	const kind = data.consumeIntegralInRange(0, 12);
 
 	if (kind === 0) {
 		const n = data.consumeIntegralInRange(-100, 100);
@@ -168,6 +168,11 @@ function buildExpr(data, depth) {
 		const root = data.consumeBoolean() ? '$' : '@';
 		const key = pickKey(data);
 		return `(${root}.${key})`;
+	}
+
+	if (kind === 11) {
+		const q = JSON.stringify(data.consumeString(12, 'utf8'));
+		return data.consumeBoolean() ? q : "'" + q.slice(1, -1).replace(/'/g, "\\'") + "'";
 	}
 
 	{

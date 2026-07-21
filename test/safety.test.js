@@ -100,3 +100,14 @@ test('source contains no string-to-code constructs', t => {
 	t.notOk(/\beval\b|\bFunction\s*\(|new\s+Function/.test(src));
 	t.end();
 });
+
+test('tokenizer resists repeated unterminated quote prefixes', t => {
+	const n = 30_000;
+	const t0 = Date.now();
+	for (const q of ['"', "'"]) {
+		const src = q + ('\\' + q).repeat(n);
+		t.throws(() => compile(src), SyntaxError, q + ' quote input is rejected');
+	}
+	t.ok(Date.now() - t0 < 1500, 'completes without quadratic rescanning');
+	t.end();
+});
