@@ -12,14 +12,18 @@ permissions:
   contents: read
 
 concurrency:
-  group: fuzz-${{ github.workflow }}-${{ github.ref }}
+  group: fuzz-${{ github.event_name }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   regression:
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [compile, evaluate, structured]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -29,12 +33,28 @@ jobs:
           node-version: lts/*
           cache: npm
       - run: npm ci
-      - run: npm run fuzz:regression
+      - run: npm run fuzz:regression:${{ matrix.target }}
+      - if: ${{ failure() }}
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: fuzz-${{ matrix.target }}-regression
+          path: |
+            fuzz/crash-*
+            fuzz/timeout-*
+            fuzz/oom-*
+            fuzz/leak-*
+            fuzz/slow-unit-*
+          if-no-files-found: ignore
+          retention-days: 14
 
   discovery:
     if: github.event_name == 'schedule'
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        target: [compile, evaluate, structured]
     steps:
       - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
         with:
@@ -44,17 +64,19 @@ jobs:
           node-version: lts/*
           cache: npm
       - run: npm ci
+      - id: jazzer
+        run: echo "version=$(node -p "require('@jazzer.js/core/package.json').version")" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
-          path: .fuzz-corpus
-          key: ${{ runner.os }}-fuzz-corpus-${{ github.run_id }}
+          path: .fuzz-corpus/${{ matrix.target }}
+          key: fuzz-${{ runner.os }}-node${{ steps.jazzer.outputs.version }}-${{ matrix.target }}-${{ github.run_id }}
           restore-keys: |
-            ${{ runner.os }}-fuzz-corpus-
-      - run: npm run fuzz
+            fuzz-${{ runner.os }}-node${{ steps.jazzer.outputs.version }}-${{ matrix.target }}-
+      - run: npm run fuzz:prepare && npm run fuzz:${{ matrix.target }}
       - if: ${{ failure() }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: fuzz-crashes
+          name: fuzz-${{ matrix.target }}-discovery
           path: |
             fuzz/crash-*
             fuzz/timeout-*
