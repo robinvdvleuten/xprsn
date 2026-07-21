@@ -50,7 +50,7 @@
 		"fuzz:regression:structured": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/structured.fuzz.js -i src/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync --mode=regression fuzz/corpus/structured -- -artifact_prefix=fuzz/",
 		"prepublishOnly": "npm run build",
 		"size": "size-limit",
-		"test": "node --disallow-code-generation-from-strings node_modules/tape/bin/tape test/*.test.js && npm run typecheck",
+		"test": "node --disallow-code-generation-from-strings --test --test-concurrency=1 test/*.test.js && npm run typecheck",
 		"typecheck": "tsc --noEmit --strict test/types.check.ts"
 	},
 	"keywords": [
@@ -66,7 +66,6 @@
 		"@size-limit/file": "^12.1.0",
 		"npm-run-all": "^4.1.5",
 		"size-limit": "^12.1.0",
-		"tape": "^5.9.0",
 		"tsdown": "^0.22.12",
 		"typescript": "^7.0.2"
 	}

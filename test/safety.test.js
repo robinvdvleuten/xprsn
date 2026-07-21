@@ -1,113 +1,103 @@
 import { readFileSync } from 'node:fs';
-import test from 'tape';
+import assert from 'node:assert/strict';
+import test from 'node:test';
 import { compile, evaluate } from '../src/index.js';
 
-test('prototype escape hatches are blocked', t => {
-	t.throws(() => evaluate('a.constructor', { a: {} }), TypeError);
-	t.throws(() => evaluate('a["constructor"]', { a: {} }), TypeError);
-	t.throws(() => evaluate('a[key]', { a: {}, key: 'constructor' }), TypeError, 'computed key resolved at runtime');
-	t.throws(() => evaluate('a.__proto__', { a: {} }), TypeError);
-	t.throws(() => evaluate('a.prototype', { a: () => {} }), TypeError);
-	t.throws(() => evaluate('constructor', {}), TypeError, 'bare variable lookup is guarded too');
-	t.throws(() => evaluate('$.constructor', { $: {} }), TypeError, 'the $ anchor does not bypass the guard');
-	t.throws(() => evaluate('@["__proto__"]', { '@': {} }), TypeError, 'the @ anchor does not bypass the guard');
-	t.throws(() => evaluate('a?.constructor', { a: {} }), TypeError, 'null-safe access is still guarded');
-	t.throws(() => evaluate('a?.["constructor"]', { a: {} }), TypeError);
-	t.equal(evaluate('a?.constructor', { a: null }), null, 'nullish base short-circuits before the key is touched');
-	t.throws(() => evaluate('__proto__', {}), TypeError);
-	t.throws(
+test('prototype escape hatches are blocked', () => {
+	assert.throws(() => evaluate('a.constructor', { a: {} }), TypeError);
+	assert.throws(() => evaluate('a["constructor"]', { a: {} }), TypeError);
+	assert.throws(() => evaluate('a[key]', { a: {}, key: 'constructor' }), TypeError, 'computed key resolved at runtime');
+	assert.throws(() => evaluate('a.__proto__', { a: {} }), TypeError);
+	assert.throws(() => evaluate('a.prototype', { a: () => {} }), TypeError);
+	assert.throws(() => evaluate('constructor', {}), TypeError, 'bare variable lookup is guarded too');
+	assert.throws(() => evaluate('$.constructor', { $: {} }), TypeError, 'the $ anchor does not bypass the guard');
+	assert.throws(() => evaluate('@["__proto__"]', { '@': {} }), TypeError, 'the @ anchor does not bypass the guard');
+	assert.throws(() => evaluate('a?.constructor', { a: {} }), TypeError, 'null-safe access is still guarded');
+	assert.throws(() => evaluate('a?.["constructor"]', { a: {} }), TypeError);
+	assert.strictEqual(evaluate('a?.constructor', { a: null }), null, 'nullish base short-circuits before the key is touched');
+	assert.throws(() => evaluate('__proto__', {}), TypeError);
+	assert.throws(
 		() => evaluate('a.constructor.constructor("return 1")', { a: {} }),
 		TypeError,
 		'the classic Function escape'
 	);
-	t.end();
 });
 
-test('hash literals cannot pollute prototypes', t => {
+test('hash literals cannot pollute prototypes', () => {
 	const before = {}.polluted;
 	const h = evaluate('{"__proto__": {"polluted": true}}');
-	t.equal({}.polluted, before, 'Object.prototype untouched');
-	t.equal(Object.getPrototypeOf(h), null, 'hash results have a null prototype');
-	t.deepEqual({ ...h.__proto__ }, { polluted: true }, '__proto__ is inert own data');
-	t.end();
+	assert.strictEqual({}.polluted, before, 'Object.prototype untouched');
+	assert.strictEqual(Object.getPrototypeOf(h), null, 'hash results have a null prototype');
+	assert.deepStrictEqual({ ...h.__proto__ }, { polluted: true }, '__proto__ is inert own data');
 });
 
-test('in does not see inherited properties', t => {
-	t.equal(evaluate('"toString" in obj', { obj: {} }), false);
-	t.equal(evaluate('"hasOwnProperty" in obj', { obj: { a: 1 } }), false);
-	t.end();
+test('in does not see inherited properties', () => {
+	assert.strictEqual(evaluate('"toString" in obj', { obj: {} }), false);
+	assert.strictEqual(evaluate('"hasOwnProperty" in obj', { obj: { a: 1 } }), false);
 });
 
-test('null-base access throws a readable error', t => {
-	t.throws(() => evaluate('a.b', { a: null }), /Cannot read "b" of null/);
+test('null-base access throws a readable error', () => {
+	assert.throws(() => evaluate('a.b', { a: null }), /Cannot read "b" of null/);
 	// `a` is absent, so it normalizes to null before the `.b` step reads through it.
-	t.throws(() => evaluate('a.b.c', {}), /Cannot read "b" of null/);
-	t.end();
+	assert.throws(() => evaluate('a.b.c', {}), /Cannot read "b" of null/);
 });
 
-test('null normalization does not relax the guards', t => {
-	t.throws(() => evaluate('a.constructor', { a: {} }), TypeError, 'prototype keys still blocked');
-	t.throws(() => evaluate('a.b', { a: null }), TypeError, 'reading through a null base still throws');
-	t.throws(() => evaluate('a.b.c', { a: {} }), TypeError, 'missing key becomes null, then reading through it throws');
-	t.end();
+test('null normalization does not relax the guards', () => {
+	assert.throws(() => evaluate('a.constructor', { a: {} }), TypeError, 'prototype keys still blocked');
+	assert.throws(() => evaluate('a.b', { a: null }), TypeError, 'reading through a null base still throws');
+	assert.throws(() => evaluate('a.b.c', { a: {} }), TypeError, 'missing key becomes null, then reading through it throws');
 });
 
-test('functions only resolve from the registry', t => {
-	t.throws(() => evaluate('toString()'), SyntaxError, 'inherited names are not functions');
-	t.throws(() => evaluate('boom()', { boom: () => 1 }), SyntaxError, 'values are not callable as functions');
-	t.end();
+test('functions only resolve from the registry', () => {
+	assert.throws(() => evaluate('toString()'), SyntaxError, 'inherited names are not functions');
+	assert.throws(() => evaluate('boom()', { boom: () => 1 }), SyntaxError, 'values are not callable as functions');
 });
 
-test('lambda values cannot reach the Function constructor', t => {
+test('lambda values cannot reach the Function constructor', () => {
 	// Lambdas make function values first-class for the first time; every property
 	// hop still routes through the get() guard, so the escape stays closed.
-	t.throws(() => evaluate('(x => x).constructor'), TypeError, 'constructor blocked on a lambda value');
-	t.throws(() => evaluate('(x => x)["constructor"]'), TypeError, 'computed constructor blocked too');
-	t.throws(() => evaluate('(x => x).__proto__'), TypeError, '__proto__ (Function.prototype) blocked');
-	t.throws(() => evaluate('(x => x).prototype'), TypeError, 'prototype blocked');
+	assert.throws(() => evaluate('(x => x).constructor'), TypeError, 'constructor blocked on a lambda value');
+	assert.throws(() => evaluate('(x => x)["constructor"]'), TypeError, 'computed constructor blocked too');
+	assert.throws(() => evaluate('(x => x).__proto__'), TypeError, '__proto__ (Function.prototype) blocked');
+	assert.throws(() => evaluate('(x => x).prototype'), TypeError, 'prototype blocked');
 	// .call/.apply/.bind are readable but only re-invoke the safe closure; the
 	// pivot to Function still needs .constructor, which the next hop blocks.
-	t.throws(() => evaluate('(x => x).call.constructor'), TypeError, 'call chain terminates at the guard');
-	t.throws(() => evaluate('(x => x).bind.constructor'), TypeError, 'bind chain terminates at the guard');
+	assert.throws(() => evaluate('(x => x).call.constructor'), TypeError, 'call chain terminates at the guard');
+	assert.throws(() => evaluate('(x => x).bind.constructor'), TypeError, 'bind chain terminates at the guard');
 	const reducers = { map: (a, f) => a.map(x => f(x)) };
-	t.throws(
+	assert.throws(
 		() => evaluate('map(rows, r => r.constructor.constructor("return 1"))', { rows: [{}] }, reducers),
 		TypeError,
 		'the classic escape is blocked inside a lambda body'
 	);
-	t.end();
 });
 
-test('a lambda param cannot be invoked as a function', t => {
+test('a lambda param cannot be invoked as a function', () => {
 	// Calls resolve only from the registry, so a lambda is never self-callable —
 	// no Y-combinator, no expression-driven recursion.
 	const reducers = { map: (a, f) => a.map(x => f(x)) };
-	t.throws(() => compile('map(a, f => f(f))', reducers), SyntaxError, 'calling the param is a compile-time error');
-	t.end();
+	assert.throws(() => compile('map(a, f => f(f))', reducers), SyntaxError, 'calling the param is a compile-time error');
 });
 
-test('a param named for a blocked key stays inert', t => {
+test('a param named for a blocked key stays inert', () => {
 	const reducers = { map: (a, f) => a.map(x => f(x)) };
 	const before = {}.polluted;
-	t.throws(() => evaluate('map(rows, __proto__ => __proto__.x)', { rows: [{ x: 1 }] }, reducers), TypeError, 'reading a __proto__ param is blocked');
-	t.throws(() => evaluate('map(rows, constructor => constructor.x)', { rows: [{ x: 1 }] }, reducers), TypeError, 'reading a constructor param is blocked');
-	t.equal({}.polluted, before, 'Object.prototype is untouched');
-	t.end();
+	assert.throws(() => evaluate('map(rows, __proto__ => __proto__.x)', { rows: [{ x: 1 }] }, reducers), TypeError, 'reading a __proto__ param is blocked');
+	assert.throws(() => evaluate('map(rows, constructor => constructor.x)', { rows: [{ x: 1 }] }, reducers), TypeError, 'reading a constructor param is blocked');
+	assert.strictEqual({}.polluted, before, 'Object.prototype is untouched');
 });
 
-test('source contains no string-to-code constructs', t => {
+test('source contains no string-to-code constructs', () => {
 	const src = readFileSync(new URL('../src/index.js', import.meta.url), 'utf8');
-	t.notOk(/\beval\b|\bFunction\s*\(|new\s+Function/.test(src));
-	t.end();
+	assert.ok(!/\beval\b|\bFunction\s*\(|new\s+Function/.test(src));
 });
 
-test('tokenizer resists repeated unterminated quote prefixes', t => {
+test('tokenizer resists repeated unterminated quote prefixes', () => {
 	const n = 30_000;
 	const t0 = Date.now();
 	for (const q of ['"', "'"]) {
 		const src = q + ('\\' + q).repeat(n);
-		t.throws(() => compile(src), SyntaxError, q + ' quote input is rejected');
+		assert.throws(() => compile(src), SyntaxError, q + ' quote input is rejected');
 	}
-	t.ok(Date.now() - t0 < 1500, 'completes without quadratic rescanning');
-	t.end();
+	assert.ok(Date.now() - t0 < 1500, 'completes without quadratic rescanning');
 });
