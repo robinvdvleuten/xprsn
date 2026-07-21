@@ -7,7 +7,7 @@
 // Sticky matching prevents a failed string from restarting at every later quote.
 // `?.` must not swallow the `?` of a ternary before a bare decimal.
 const TOKEN = /\s+|\d*\.?\d+(?:[eE][+-]?\d+)?|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[\w$@]+|\?\.(?!\d)|\?\?|=>|[<>=!*]=|&&|\|\||\*\*|\S/y;
-let source, pos;
+let length, pos;
 let fault = (Type, msg, code, start, end) => {
 	let e = Type(msg);
 	e.code = code;
@@ -17,7 +17,7 @@ let fault = (Type, msg, code, start, end) => {
 };
 let lex = s => {
 	let out = [], at, t;
-	source = s;
+	length = s.length;
 	pos = [];
 	for (TOKEN.lastIndex = 0; TOKEN.lastIndex < s.length; ) {
 		at = TOKEN.lastIndex;
@@ -42,7 +42,7 @@ let toks, i, fns, nm, fnm, bnd;
 let EMPTY = new Set();
 
 let err = (msg, code = 'XPRSN_SYNTAX', at = i) => {
-	let p = at < toks.length ? pos[at] : source.length;
+	let p = at < toks.length ? pos[at] : length;
 	throw fault(SyntaxError, msg, code, p, at < toks.length ? p + toks[at].length : p);
 };
 let bad = () => err('Unexpected ' + (toks[i] ?? 'end of expression'));
@@ -294,7 +294,7 @@ export function compile(src, funcs, opts) {
 	try { e = toks.length ? ternary() : bad(); }
 	catch (x) {
 		throw x instanceof RangeError
-			? fault(SyntaxError, 'Expression too deeply nested', 'XPRSN_TOO_DEEP', 0, source.length)
+			? fault(SyntaxError, 'Expression too deeply nested', 'XPRSN_TOO_DEEP', 0, length)
 			: x;
 	}
 	i < toks.length && bad();
