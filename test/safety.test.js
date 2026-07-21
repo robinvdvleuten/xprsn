@@ -42,6 +42,39 @@ test('null-base access throws a readable error', () => {
 	assert.throws(() => evaluate('a.b.c', {}), /Cannot read "b" of null/);
 });
 
+test('runtime diagnostics identify the failing read operation', () => {
+	let check = (src, values, code, start, end) => {
+		assert.throws(() => evaluate(src, values), e => {
+			assert.ok(e instanceof TypeError);
+			assert.strictEqual(e.code, code);
+			assert.deepStrictEqual([e.start, e.end], [start, end]);
+			return true;
+		});
+	};
+	check('a.b', { a: null }, 'XPRSN_NULL_BASE', 2, 3);
+	check('constructor', {}, 'XPRSN_BLOCKED_KEY', 0, 11);
+	check('a[key]', { a: {}, key: 'constructor' }, 'XPRSN_BLOCKED_KEY', 1, 6);
+	check('a.m()', { a: { m: 1 } }, 'XPRSN_NOT_CALLABLE', 2, 5);
+});
+
+test('host errors pass through without xprsn diagnostics', () => {
+	let registry = TypeError('registry failed');
+	assert.throws(
+		() => evaluate('boom()', {}, { boom: () => { throw registry } }),
+		e => e === registry && !Object.hasOwn(e, 'code')
+	);
+	let getter = TypeError('getter failed');
+	assert.throws(
+		() => evaluate('a.b', { a: { get b() { throw getter } } }),
+		e => e === getter && !Object.hasOwn(e, 'code')
+	);
+	let method = TypeError('method failed');
+	assert.throws(
+		() => evaluate('a.m()', { a: { m() { throw method } } }),
+		e => e === method && !Object.hasOwn(e, 'code')
+	);
+});
+
 test('null normalization does not relax the guards', () => {
 	assert.throws(() => evaluate('a.constructor', { a: {} }), TypeError, 'prototype keys still blocked');
 	assert.throws(() => evaluate('a.b', { a: null }), TypeError, 'reading through a null base still throws');

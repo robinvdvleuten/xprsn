@@ -208,6 +208,24 @@ const isEvalErr = e =>
 	e instanceof SyntaxError ||
 	e instanceof TypeError ||
 	(e instanceof RangeError && /stack|Maximum call/i.test(String(e.message)));
+const CODES = new Set([
+	'XPRSN_SYNTAX',
+	'XPRSN_UNKNOWN_FUNCTION',
+	'XPRSN_TOO_DEEP',
+	'XPRSN_NULL_BASE',
+	'XPRSN_BLOCKED_KEY',
+	'XPRSN_NOT_CALLABLE',
+]);
+const checkDiag = (e, src, required) => {
+	if (!Object.hasOwn(e, 'code')) {
+		if (required) throw new Error('xprsn error lacks diagnostics');
+		return;
+	}
+	if (!CODES.has(e.code)) throw new Error('unknown diagnostic code');
+	if (!Number.isInteger(e.start) || !Number.isInteger(e.end) ||
+		e.start < 0 || e.end < e.start || e.end > src.length)
+		throw new Error('invalid diagnostic span');
+};
 
 // Prototype-pollution canary — defense-in-depth alongside jazzer's native
 // prototype-pollution detector (enabled in strong mode via fuzz/hooks.js). The
@@ -233,7 +251,11 @@ export function fuzz(data) {
 
 	let fn;
 	try { fn = compile(src, FUNCS); }
-	catch (e) { if (!isCompileErr(e)) throw e; return; }
+	catch (e) {
+		if (!isCompileErr(e)) throw e;
+		checkDiag(e, src, true);
+		return;
+	}
 
 	const names = fn.names;
 	const values = buildValues(provider, names);
@@ -245,6 +267,7 @@ export function fuzz(data) {
 		ok = true;
 	} catch (e) {
 		if (!isEvalErr(e)) throw e;
+		checkDiag(e, src, false);
 	} finally {
 		// These run even when eval throws or the catch returns; a pollution or
 		// mutation finding takes precedence over an expected/unexpected eval error.

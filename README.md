@@ -1,6 +1,6 @@
 # xprsn
 
-A tiny, CSP-safe expression language for JavaScript. **~1.3KB min+gzip, zero dependencies.**
+A tiny, CSP-safe expression language for JavaScript. **~1.8KB min+compressed, zero dependencies.**
 
 [![NPM version](https://img.shields.io/npm/v/xprsn.svg)](https://www.npmjs.com/package/xprsn)
 [![Build Status](https://github.com/robinvdvleuten/xprsn/actions/workflows/test.yml/badge.svg)](https://github.com/robinvdvleuten/xprsn/actions/workflows/test.yml)
@@ -79,6 +79,18 @@ There is no built-in parse cache; if you evaluate the same expressions repeatedl
 const cache = new Map();
 const cached = expr => cache.get(expr) ?? cache.set(expr, compile(expr)).get(expr);
 ```
+
+### Error diagnostics
+
+Errors produced by xprsn keep their `SyntaxError` or `TypeError` class and expose three machine-readable properties:
+
+- `code`: a stable category;
+- `start`: the zero-based source offset;
+- `end`: the exclusive source offset.
+
+The codes are `XPRSN_SYNTAX`, `XPRSN_UNKNOWN_FUNCTION`, `XPRSN_TOO_DEEP`, `XPRSN_NULL_BASE`, `XPRSN_BLOCKED_KEY`, and `XPRSN_NOT_CALLABLE`. End-of-input syntax errors use an empty span at the expression length. A computed property failure spans the bracket operation because its runtime key may not occur literally in the source.
+
+Errors thrown by registered functions, getters, methods, or value coercion hooks are host errors. xprsn passes them through unchanged and does not attach diagnostic fields.
 
 ## Syntax
 

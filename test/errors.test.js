@@ -49,3 +49,22 @@ test('deeply nested input throws SyntaxError, not RangeError', () => {
 		assert.ok(!(e instanceof RangeError), 'not a raw RangeError');
 	}
 });
+
+test('compile errors expose stable codes and source spans', () => {
+	let check = (src, code, start, end, funcs) => {
+		assert.throws(() => compile(src, funcs), e => {
+			assert.ok(e instanceof SyntaxError);
+			assert.strictEqual(e.code, code);
+			assert.deepStrictEqual([e.start, e.end], [start, end]);
+			return true;
+		});
+	};
+	check('1 +', 'XPRSN_SYNTAX', 3, 3);
+	check('1 + )', 'XPRSN_SYNTAX', 4, 5);
+	check('"abc', 'XPRSN_SYNTAX', 0, 4);
+	check(String.raw`'\x41'`, 'XPRSN_SYNTAX', 0, 6);
+	check('nope(1)', 'XPRSN_UNKNOWN_FUNCTION', 0, 4);
+
+	const deep = '('.repeat(50000) + '1' + ')'.repeat(50000);
+	check(deep, 'XPRSN_TOO_DEEP', 0, deep.length);
+});

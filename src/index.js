@@ -7,12 +7,23 @@
 // Sticky matching prevents a failed string from restarting at every later quote.
 // `?.` must not swallow the `?` of a ternary before a bare decimal.
 const TOKEN = /\s+|\d*\.?\d+(?:[eE][+-]?\d+)?|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[\w$@]+|\?\.(?!\d)|\?\?|=>|[<>=!*]=|&&|\|\||\*\*|\S/y;
+let source, pos;
+let fault = (Type, msg, code, start, end) => {
+	let e = Type(msg);
+	e.code = code;
+	e.start = start;
+	e.end = end;
+	return e;
+};
 let lex = s => {
-	let out = [], t;
+	let out = [], at, t;
+	source = s;
+	pos = [];
 	for (TOKEN.lastIndex = 0; TOKEN.lastIndex < s.length; ) {
+		at = TOKEN.lastIndex;
 		t = TOKEN.exec(s)[0];
-		(t !== '"' && t !== "'") || err();
-		t.trim() && out.push(t);
+		if (t === '"' || t === "'") throw fault(SyntaxError, 'Unexpected ' + t, 'XPRSN_SYNTAX', at, s.length);
+		if (t.trim()) out.push(t), pos.push(at, TOKEN.lastIndex);
 	}
 	return out;
 };
@@ -30,7 +41,10 @@ let toks, i, fns, nm, fnm, bnd;
 // Shared empty set so the common no-`bound` path allocates nothing.
 let EMPTY = new Set();
 
-let err = msg => { throw SyntaxError(msg) };
+let err = (msg, code = 'XPRSN_SYNTAX', at = i) => {
+	let p = at < toks.length ? pos[at * 2] : source.length;
+	throw fault(SyntaxError, msg, code, p, at < toks.length ? pos[at * 2 + 1] : p);
+};
 let bad = () => err('Unexpected ' + (toks[i] ?? 'end of expression'));
 let eat = t => toks[i] === t && (i++, !0);
 let expect = t => eat(t) || bad();
@@ -38,9 +52,10 @@ let expect = t => eat(t) || bad();
 // Guarded property read — the single gate for every dynamic key in the
 // language. Blocks the prototype-chain escape hatches (`x.constructor.constructor`
 // is `Function`) and gives readable errors on null bases.
-let get = (o, k) => {
-	if (o == null) throw TypeError('Cannot read "' + k + '" of ' + o);
-	if (k === '__proto__' || k === 'constructor' || k === 'prototype') throw TypeError('Cannot access "' + k + '"');
+let get = (o, k, start, end) => {
+	if (o == null) throw fault(TypeError, 'Cannot read "' + k + '" of ' + o, 'XPRSN_NULL_BASE', start, end);
+	if (k === '__proto__' || k === 'constructor' || k === 'prototype')
+		throw fault(TypeError, 'Cannot access "' + k + '"', 'XPRSN_BLOCKED_KEY', start, end);
 	// Absence normalizes to null: a missing key or variable reads as null, so the
 	// natural `x == null` test works. Present null/0/false/"" pass through untouched.
 	let r = o[k];
@@ -48,8 +63,14 @@ let get = (o, k) => {
 };
 
 // String literal → value. Single-quoted strings normalize to JSON first.
-let str = t => JSON.parse(t[0] === '"' ? t : '"' + t.slice(1, -1)
-	.replace(/\\.|"/g, c => c === "\\'" ? "'" : c === '"' ? '\\"' : c) + '"');
+let str = (t, at) => {
+	try {
+		return JSON.parse(t[0] === '"' ? t : '"' + t.slice(1, -1)
+			.replace(/\\.|"/g, c => c === "\\'" ? "'" : c === '"' ? '\\"' : c) + '"');
+	} catch (x) {
+		err(x.message, 'XPRSN_SYNTAX', at);
+	}
+};
 
 // Identifier start (also a valid property name): letters, `_`, and the `$`/`@`
 // scope anchors. Property keys still route through the get() guard.
@@ -82,7 +103,7 @@ let list = end => {
 };
 
 let primary = () => {
-	let t = toks[i++] ?? bad();
+	let at = i, t = toks[i++] ?? bad();
 
 	if (t === '(') {
 		let e = ternary();
@@ -99,8 +120,8 @@ let primary = () => {
 		let pairs = [];
 		if (!eat('}')) {
 			do {
-				let k = toks[i++] ?? bad();
-				k = /^["']/.test(k) ? str(k) : /^[\w.$@]/.test(k) ? k : (i--, bad());
+				let at = i, k = toks[i++] ?? bad();
+				k = /^["']/.test(k) ? str(k, at) : /^[\w.$@]/.test(k) ? k : (i--, bad());
 				expect(':');
 				pairs.push([k, ternary()]);
 			} while (eat(','));
@@ -115,7 +136,7 @@ let primary = () => {
 	}
 
 	if (/^["']/.test(t)) {
-		let s = str(t);
+		let s = str(t, at);
 		return () => s;
 	}
 
@@ -131,13 +152,13 @@ let primary = () => {
 	if (ID.test(t)) {
 		if (eat('(')) {
 			// Functions resolve at compile time, only from the registry.
-			Object.hasOwn(fns, t) || err(t + ' is not a function');
+			Object.hasOwn(fns, t) || err(t + ' is not a function', 'XPRSN_UNKNOWN_FUNCTION', at);
 			fnm.add(t);
 			let fn = fns[t], args = list(')');
 			return v => fn(...args.map(e => e(v)));
 		}
 		bnd.has(t) || nm.add(t);
-		return v => get(v, t);
+		return v => get(v, t, pos[at * 2], pos[at * 2 + 1]);
 	}
 
 	i--;
@@ -147,27 +168,35 @@ let primary = () => {
 // One postfix step off base `o`. `key(v)` is the member key; `opt` (the `?.`
 // form) yields null on a nullish base instead of throwing, per step; a
 // truthy `args` makes it a method call bound to the base.
-let step = (o, key, opt, args) => v => {
+let step = (o, key, opt, args, start, end, callStart, callEnd) => v => {
 	let b = o(v);
 	if (opt && b == null) return null;
-	let m = get(b, key(v));
-	return args ? m.apply(b, args.map(a => a(v))) : m;
+	let m = get(b, key(v), start, end);
+	if (!args) return m;
+	if (m == null || typeof m.apply !== 'function')
+		throw fault(TypeError, 'Cannot call method', 'XPRSN_NOT_CALLABLE', callStart, callEnd);
+	return m.apply(b, args.map(a => a(v)));
 };
 
 let postfix = () => {
 	let e = primary();
 	for (;;) {
-		let opt = eat('?.'), computed = eat('['), key;
+		let opAt = i, opt = eat('?.'), computed = eat('['), key, start, end;
 		if (computed) {
 			key = ternary();
 			expect(']');
+			start = pos[opAt * 2];
+			end = pos[(i - 1) * 2 + 1];
 		} else if (opt || eat('.')) {
-			let k = toks[i++] ?? bad();
+			let at = i, k = toks[i++] ?? bad();
 			ID.test(k) || (i--, bad());
 			key = () => k;
+			start = pos[at * 2];
+			end = pos[at * 2 + 1];
 		} else return e;
 		// A trailing `(` is a method call, but not on a computed index.
-		e = step(e, key, opt, !computed && eat('(') ? list(')') : 0);
+		let args = !computed && eat('(') ? list(')') : 0;
+		e = step(e, key, opt, args, start, end, start, args ? pos[(i - 1) * 2 + 1] : end);
 	}
 };
 
@@ -252,7 +281,8 @@ let ternary = () => {
  * @throws {SyntaxError} On malformed input or unknown function names.
  */
 export function compile(src, funcs, opts) {
-	toks = lex(String(src));
+	src = String(src);
+	toks = lex(src);
 	i = 0;
 	fns = funcs || {};
 	nm = new Set();
@@ -262,7 +292,11 @@ export function compile(src, funcs, opts) {
 	// a SyntaxError so malformed input keeps its documented compile-time contract.
 	let e;
 	try { e = toks.length ? ternary() : bad(); }
-	catch (x) { throw x instanceof RangeError ? SyntaxError('Expression too deeply nested') : x }
+	catch (x) {
+		throw x instanceof RangeError
+			? fault(SyntaxError, 'Expression too deeply nested', 'XPRSN_TOO_DEEP', 0, source.length)
+			: x;
+	}
 	i < toks.length && bad();
 	let f = v => e(v || {});
 	// Array.from, not a spread: the bundler's transpile turns `[...set]` into
