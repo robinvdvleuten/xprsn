@@ -173,7 +173,7 @@ let step = (o, key, opt, args, start, end, callStart, callEnd) => v => {
 	if (opt && b == null) return null;
 	let m = get(b, key(v), start, end);
 	if (!args) return m;
-	if (m == null || typeof m.apply !== 'function')
+	if (typeof m?.apply !== 'function')
 		throw fault(TypeError, 'Cannot call method', 'XPRSN_NOT_CALLABLE', callStart, callEnd);
 	return m.apply(b, args.map(a => a(v)));
 };
