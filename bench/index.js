@@ -1,47 +1,48 @@
-// Micro-benchmarks for xprsn. Run with `npm run bench`.
-//
-// Zero-dependency harness: warm up to let the JIT settle, then time ~100ms
-// batches and report the best ops/sec (the sample least disturbed by GC and
-// scheduling noise). `compile` and `evaluate` are measured apart because the
-// design is compile-once, evaluate-many. `sink` reads every result so the work
-// cannot be optimized away.
+// Manual micro-benchmarks for xprsn. Run with `npm run bench`.
+import assert from 'node:assert/strict';
 import { compile, evaluate } from '../src/index.js';
 
 let sink = 0;
 
-function bench(name, fn) {
-	for (let w = performance.now(); performance.now() - w < 50; ) fn(); // warmup
+function consume(value) {
+	sink += typeof value === 'number' ? value : value ? 1 : 0;
+}
+
+function micro(name, fn) {
+	for (let t = performance.now(); performance.now() - t < 50;) consume(fn());
 	let best = 0;
-	for (let s = 0; s < 5; s++) {
-		let ops = 0, dt, t = performance.now();
+	for (let sample = 0; sample < 5; sample++) {
+		let ops = 0;
+		const start = performance.now();
+		let elapsed;
 		do {
-			for (let i = 0; i < 1000; i++) sink += fn() ? 1 : 0;
+			for (let i = 0; i < 1000; i++) consume(fn());
 			ops += 1000;
-		} while ((dt = performance.now() - t) < 100);
-		const hz = ops / (dt / 1e3);
-		if (hz > best) best = hz;
+			elapsed = performance.now() - start;
+		} while (elapsed < 100);
+		best = Math.max(best, ops / (elapsed / 1e3));
 	}
-	console.log(name.padEnd(24), Math.round(best).toLocaleString().padStart(14), 'ops/sec');
+	console.log(name.padEnd(30), Math.round(best).toLocaleString().padStart(14), 'ops/sec');
 }
 
 const values = { user: { age: 30, roles: ['admin', 'user'] }, price: 60, qty: 2, items: [{ price: 60 }] };
 const EXPR = 'user.age > 18 and "admin" in user.roles ? price * qty : 0';
 
-// Compile (parse) throughput.
-bench('compile: a + b', () => compile('a + b'));
-bench('compile: complex', () => compile(EXPR));
-
-// Evaluate throughput of an already-compiled expression.
 const add = compile('a + b');
-bench('eval: a + b', () => add({ a: 1, b: 2 }));
-
 const complex = compile(EXPR);
-bench('eval: complex', () => complex(values));
-
 const member = compile('items[0].price * qty');
-bench('eval: member access', () => member(values));
 
-// Combined compile + evaluate, for callers that do not cache.
-bench('evaluate: one-shot', () => evaluate('a + b', { a: 1, b: 2 }));
+assert.equal(add({ a: 1, b: 2 }), 3);
+assert.equal(complex(values), 120);
+assert.equal(member(values), 120);
 
-if (sink < 0) console.log(sink); // retain sink
+console.log(`Node ${process.version} · ${process.platform} ${process.arch}`);
+console.log('\nMicrobenchmarks (best of 5)');
+micro('compile: a + b', () => compile('a + b'));
+micro('compile: complex', () => compile(EXPR));
+micro('run: a + b', () => add({ a: 1, b: 2 }));
+micro('run: complex', () => complex(values));
+micro('run: member access', () => member(values));
+micro('evaluate: one-shot', () => evaluate('a + b', { a: 1, b: 2 }));
+
+if (sink < 0) console.log(sink);

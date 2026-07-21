@@ -37,7 +37,7 @@
 		}
 	],
 	"scripts": {
-		"bench": "node bench/index.js",
+		"bench": "node --disallow-code-generation-from-strings bench/index.js",
 		"build": "tsdown",
 		"fuzz": "npm run fuzz:prepare && run-s fuzz:compile fuzz:evaluate fuzz:structured",
 		"fuzz:prepare": "node -e \"for (const x of ['compile','evaluate','structured']) require('fs').mkdirSync('.fuzz-corpus/'+x,{recursive:true})\"",
