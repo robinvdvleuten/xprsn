@@ -23,7 +23,7 @@ let lex = s => {
 		at = TOKEN.lastIndex;
 		t = TOKEN.exec(s)[0];
 		if (t === '"' || t === "'") throw fault(SyntaxError, 'Unexpected ' + t, 'XPRSN_SYNTAX', at, s.length);
-		if (t.trim()) out.push(t), pos.push(at, TOKEN.lastIndex);
+		if (t.trim()) out.push(t), pos.push(at);
 	}
 	return out;
 };
@@ -42,8 +42,8 @@ let toks, i, fns, nm, fnm, bnd;
 let EMPTY = new Set();
 
 let err = (msg, code = 'XPRSN_SYNTAX', at = i) => {
-	let p = at < toks.length ? pos[at * 2] : source.length;
-	throw fault(SyntaxError, msg, code, p, at < toks.length ? pos[at * 2 + 1] : p);
+	let p = at < toks.length ? pos[at] : source.length;
+	throw fault(SyntaxError, msg, code, p, at < toks.length ? p + toks[at].length : p);
 };
 let bad = () => err('Unexpected ' + (toks[i] ?? 'end of expression'));
 let eat = t => toks[i] === t && (i++, !0);
@@ -158,7 +158,7 @@ let primary = () => {
 			return v => fn(...args.map(e => e(v)));
 		}
 		bnd.has(t) || nm.add(t);
-		return v => get(v, t, pos[at * 2], pos[at * 2 + 1]);
+		return v => get(v, t, pos[at], pos[at] + t.length);
 	}
 
 	i--;
@@ -185,18 +185,18 @@ let postfix = () => {
 		if (computed) {
 			key = ternary();
 			expect(']');
-			start = pos[opAt * 2];
-			end = pos[(i - 1) * 2 + 1];
+			start = pos[opAt];
+			end = pos[i - 1] + toks[i - 1].length;
 		} else if (opt || eat('.')) {
 			let at = i, k = toks[i++] ?? bad();
 			ID.test(k) || (i--, bad());
 			key = () => k;
-			start = pos[at * 2];
-			end = pos[at * 2 + 1];
+			start = pos[at];
+			end = start + k.length;
 		} else return e;
 		// A trailing `(` is a method call, but not on a computed index.
 		let args = !computed && eat('(') ? list(')') : 0;
-		e = step(e, key, opt, args, start, end, start, args ? pos[(i - 1) * 2 + 1] : end);
+		e = step(e, key, opt, args, start, end, start, args ? pos[i - 1] + toks[i - 1].length : end);
 	}
 };
 
