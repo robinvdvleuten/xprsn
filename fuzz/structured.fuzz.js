@@ -216,11 +216,12 @@ const CODES = new Set([
 	'XPRSN_BLOCKED_KEY',
 	'XPRSN_NOT_CALLABLE',
 ]);
-const checkDiag = (e, src, required) => {
+const checkDiag = (e, src, required, fn) => {
 	if (!isDiagnostic(e)) {
 		if (required || Object.hasOwn(e, 'code')) throw new Error('xprsn error lacks provenance');
 		return;
 	}
+	if (fn && !fn.isDiagnostic(e)) throw new Error('xprsn error has wrong evaluator provenance');
 	if (!Object.hasOwn(e, 'code')) throw new Error('xprsn error lacks diagnostics');
 	if (!CODES.has(e.code)) throw new Error('unknown diagnostic code');
 	if (!Number.isInteger(e.start) || !Number.isInteger(e.end) ||
@@ -268,7 +269,7 @@ export function fuzz(data) {
 		ok = true;
 	} catch (e) {
 		if (!isEvalErr(e)) throw e;
-		checkDiag(e, src, false);
+		checkDiag(e, src, false, fn);
 	} finally {
 		// These run even when eval throws or the catch returns; a pollution or
 		// mutation finding takes precedence over an expected/unexpected eval error.

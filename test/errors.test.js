@@ -95,11 +95,14 @@ test('diagnostic provenance is local to a module instance', async () => {
 });
 
 test('captured provenance operations resist later prototype replacement', () => {
-	const add = WeakSet.prototype.add;
-	const has = WeakSet.prototype.has;
+	const set = WeakMap.prototype.set;
+	const get = WeakMap.prototype.get;
+	const has = WeakMap.prototype.has;
+	const fn = compile('a.b');
 	try {
-		WeakSet.prototype.add = function () { return this };
-		WeakSet.prototype.has = () => true;
+		WeakMap.prototype.set = function () { return this };
+		WeakMap.prototype.get = () => ({});
+		WeakMap.prototype.has = () => true;
 		const spoof = Object.assign(SyntaxError('spoof'), {
 			code: 'XPRSN_SYNTAX',
 			start: 0,
@@ -107,8 +110,10 @@ test('captured provenance operations resist later prototype replacement', () => 
 		});
 		assert.strictEqual(isDiagnostic(spoof), false);
 		assert.throws(() => compile(''), e => isDiagnostic(e));
+		assert.throws(() => fn({ a: null }), e => isDiagnostic(e) && fn.isDiagnostic(e));
 	} finally {
-		WeakSet.prototype.add = add;
-		WeakSet.prototype.has = has;
+		WeakMap.prototype.set = set;
+		WeakMap.prototype.get = get;
+		WeakMap.prototype.has = has;
 	}
 });

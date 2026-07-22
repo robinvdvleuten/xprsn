@@ -7,6 +7,7 @@ import {
 	isDiagnostic,
 	type XprsnDiagnostic,
 	type XprsnErrorCode,
+	type XprsnEvaluator,
 } from '../index';
 
 const error: unknown = new Error();
@@ -18,8 +19,14 @@ if (isDiagnostic(error)) {
 }
 
 const fn = compile('user.age > 18 and (discount ?? 0) > 0');
+const evaluator: XprsnEvaluator = fn;
 fn({ user: { age: 30 }, discount: 5 });
 fn();                                   // values arg is optional
+
+if (fn.isDiagnostic(error)) {
+	const diagnostic: XprsnDiagnostic = error;
+	const code: XprsnErrorCode = diagnostic.code;
+}
 
 const names: string[] = fn.names;
 const functions: string[] = fn.functions;

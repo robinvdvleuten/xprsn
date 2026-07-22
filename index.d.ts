@@ -18,6 +18,13 @@ export interface XprsnDiagnostic extends Error {
 	readonly end: number;
 }
 
+export interface XprsnEvaluator {
+	(values?: Record<string, any>): any;
+	names: string[];
+	functions: string[];
+	isDiagnostic(error: unknown): error is XprsnDiagnostic;
+}
+
 /**
  * Test whether an error was created by this xprsn module instance.
  */
@@ -45,7 +52,7 @@ export function compile(
 	src: string,
 	funcs?: Record<string, Fn>,
 	opts?: { bound?: Iterable<string> }
-): { (values?: Record<string, any>): any; names: string[]; functions: string[] };
+): XprsnEvaluator;
 
 /**
  * Compile and evaluate an expression in one go.

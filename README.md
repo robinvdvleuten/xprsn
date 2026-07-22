@@ -94,6 +94,8 @@ Errors thrown by registered functions, getters, methods, or value coercion hooks
 
 Use `isDiagnostic(error)` when a host needs to distinguish those errors. It returns `true` only for errors created by the same xprsn module instance. Copying a documented `code`, `start`, and `end` onto another error does not authenticate it. A diagnostic from another installed copy or module instance also returns `false`.
 
+Each function returned by `compile` also has `isDiagnostic(error)`. This narrower predicate returns `true` only for runtime guard errors created by that evaluator, so an embedder can relocate its source span without mistaking an authentic xprsn error thrown by a host function, getter, method, or coercion hook for the outer expression's error. Compile-time diagnostics occur before an evaluator exists and authenticate only through the package-level predicate. The one-shot `evaluate` API does not expose its temporary evaluator; use `compile` when scoped authentication is required.
+
 ## Syntax
 
 | Category | Syntax |

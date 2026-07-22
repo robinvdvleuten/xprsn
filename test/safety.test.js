@@ -3,6 +3,12 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { compile, evaluate, isDiagnostic } from '../src/index.js';
 
+let caught = fn => {
+	try { fn() }
+	catch (e) { return e }
+	assert.fail('expected an error');
+};
+
 test('prototype escape hatches are blocked', () => {
 	assert.throws(() => evaluate('a.constructor', { a: {} }), TypeError);
 	assert.throws(() => evaluate('a["constructor"]', { a: {} }), TypeError);
@@ -56,6 +62,72 @@ test('runtime diagnostics identify the failing read operation', () => {
 	check('constructor', {}, 'XPRSN_BLOCKED_KEY', 0, 11);
 	check('a[key]', { a: {}, key: 'constructor' }, 'XPRSN_BLOCKED_KEY', 1, 6);
 	check('a.m()', { a: { m: 1 } }, 'XPRSN_NOT_CALLABLE', 2, 5);
+});
+
+test('runtime diagnostic provenance is scoped to its evaluator', () => {
+	const first = compile('a.b');
+	const second = compile('a.b');
+	const one = caught(() => first({ a: null }));
+	const two = caught(() => first({ a: null }));
+
+	assert.ok(isDiagnostic(one));
+	assert.ok(first.isDiagnostic(one));
+	assert.ok(first.isDiagnostic(two), 'repeated calls keep the same evaluator origin');
+	assert.strictEqual(second.isDiagnostic(one), false);
+
+	const compileError = caught(() => compile('1 +'));
+	assert.ok(isDiagnostic(compileError));
+	assert.strictEqual(first.isDiagnostic(compileError), false, 'compile errors have package provenance only');
+});
+
+test('runtime provenance is local to a module instance', async () => {
+	const other = await import('../src/index.js?instance=runtime-provenance');
+	const first = compile('a.b');
+	const second = other.compile('a.b');
+	const one = caught(() => first({ a: null }));
+	const two = caught(() => second({ a: null }));
+
+	assert.ok(first.isDiagnostic(one));
+	assert.ok(second.isDiagnostic(two));
+	assert.strictEqual(first.isDiagnostic(two), false);
+	assert.strictEqual(second.isDiagnostic(one), false);
+	assert.strictEqual(isDiagnostic(two), false);
+	assert.strictEqual(other.isDiagnostic(one), false);
+});
+
+test('authentic host errors do not inherit the outer evaluator origin', () => {
+	const compileError = caught(() => compile('1 +'));
+	const foreign = compile('a.b');
+	const runtimeError = caught(() => foreign({ a: null }));
+	const cases = [
+		compile('boom()', { boom: () => { throw compileError } }),
+		compile('boom()', { boom: () => foreign({ a: null }) }),
+		compile('a.b'),
+		compile('a.m()'),
+		compile('a ~ ""'),
+	];
+	const values = [
+		{},
+		{},
+		{ a: { get b() { throw runtimeError } } },
+		{ a: { m() { throw runtimeError } } },
+		{ a: { [Symbol.toPrimitive]() { throw runtimeError } } },
+	];
+
+	for (let i = 0; i < cases.length; i++) {
+		const e = caught(() => cases[i](values[i]));
+		assert.ok(isDiagnostic(e), 'the package still authenticates the inner error');
+		assert.strictEqual(cases[i].isDiagnostic(e), false, 'the outer evaluator rejects it');
+	}
+});
+
+test('lambda guard errors retain their compiled evaluator origin', () => {
+	const fn = compile('map(rows, r => r.missing.value)', {
+		map: (rows, pick) => rows.map(pick),
+	});
+	const e = caught(() => fn({ rows: [{}] }));
+	assert.ok(isDiagnostic(e));
+	assert.ok(fn.isDiagnostic(e));
 });
 
 test('host errors pass through without xprsn diagnostics', () => {
