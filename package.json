@@ -1,6 +1,6 @@
 {
 	"name": "xprsn",
-	"version": "0.6.0",
+	"version": "0.7.0",
 	"description": "Tiny, CSP-safe expression language for JavaScript. No eval, no new Function.",
 	"repository": "robinvdvleuten/xprsn",
 	"license": "MIT",
