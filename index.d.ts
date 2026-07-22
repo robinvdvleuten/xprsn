@@ -4,10 +4,24 @@
 
 type Fn = (...args: any[]) => any;
 
+export type XprsnErrorCode =
+	| 'XPRSN_SYNTAX'
+	| 'XPRSN_UNKNOWN_FUNCTION'
+	| 'XPRSN_TOO_DEEP'
+	| 'XPRSN_NULL_BASE'
+	| 'XPRSN_BLOCKED_KEY'
+	| 'XPRSN_NOT_CALLABLE';
+
+export interface XprsnDiagnostic extends Error {
+	readonly code: XprsnErrorCode;
+	readonly start: number;
+	readonly end: number;
+}
+
 /**
  * Test whether an error was created by this xprsn module instance.
  */
-export function isDiagnostic(error: unknown): boolean;
+export function isDiagnostic(error: unknown): error is XprsnDiagnostic;
 
 /**
  * Compile an expression once, evaluate it many times.
