@@ -21,6 +21,9 @@
 			"require": "./dist/index.cjs"
 		}
 	},
+	"engines": {
+		"node": ">=22.0.0"
+	},
 	"files": [
 		"dist",
 		"src",

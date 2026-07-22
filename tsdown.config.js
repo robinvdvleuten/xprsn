@@ -4,6 +4,7 @@ export default defineConfig({
 	entry: ['src/index.js'],
 	format: ['esm', 'cjs'],
 	platform: 'neutral',
+	target: 'es2024',
 	minify: true,
 	sourcemap: false,
 	dts: false,

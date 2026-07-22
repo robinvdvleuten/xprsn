@@ -197,6 +197,10 @@ Expressions can only read the data you pass in:
 
 Expressions can still call methods on the values you expose (`user.delete()`, say, if you pass such an object), so only pass data you are comfortable handing over.
 
+## Environments
+
+Node.js 22 and newer are supported through the ESM and CommonJS builds. Browser use is supported through a standards-based ESM bundler in environments supporting ES2024. Direct `<script>` globals and UMD builds are not provided.
+
 ## License
 
 MIT © [Robin van der Vleuten](https://robinvdvleuten.nl)
