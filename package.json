@@ -51,7 +51,7 @@
 		"prepublishOnly": "npm run build",
 		"size": "size-limit",
 		"test": "node --disallow-code-generation-from-strings --test --test-concurrency=1 test/*.test.js && npm run typecheck",
-		"typecheck": "tsc --noEmit --strict test/types.check.ts"
+		"typecheck": "tsc"
 	},
 	"keywords": [
 		"expression",
