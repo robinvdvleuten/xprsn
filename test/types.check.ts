@@ -1,7 +1,9 @@
 // Type smoke test for index.d.ts — run via `npm run typecheck`.
 // The declarations are plain (no expression-level inference), so this only
 // checks the public API is callable with the expected shapes.
-import { compile, evaluate } from '../index';
+import { compile, evaluate, isDiagnostic } from '../index';
+
+const diagnostic: boolean = isDiagnostic(new Error());
 
 const fn = compile('user.age > 18 and (discount ?? 0) > 0');
 fn({ user: { age: 30 }, discount: 5 });

@@ -16,7 +16,7 @@ A tiny, CSP-safe expression language for JavaScript. **~1.8KB min+compressed, ze
 Evaluates expressions like `user.age > 18 and "admin" in user.roles` against data you provide, without running them as JavaScript. xprsn parses each expression into a chain of plain closures, so there is no `eval` and no `new Function`.
 
 ```js
-import { compile, evaluate } from 'xprsn';
+import { compile, evaluate, isDiagnostic } from 'xprsn';
 
 // One-shot:
 evaluate('items[0].price * qty > 100', { items: [{ price: 60 }], qty: 2 });
@@ -91,6 +91,8 @@ Errors produced by xprsn keep their `SyntaxError` or `TypeError` class and expos
 The codes are `XPRSN_SYNTAX`, `XPRSN_UNKNOWN_FUNCTION`, `XPRSN_TOO_DEEP`, `XPRSN_NULL_BASE`, `XPRSN_BLOCKED_KEY`, and `XPRSN_NOT_CALLABLE`. End-of-input syntax errors use an empty span at the expression length. A computed property failure spans the bracket operation because its runtime key may not occur literally in the source.
 
 Errors thrown by registered functions, getters, methods, or value coercion hooks are host errors. xprsn passes them through unchanged and does not attach diagnostic fields.
+
+Use `isDiagnostic(error)` when a host needs to distinguish those errors. It returns `true` only for errors created by the same xprsn module instance. Copying a documented `code`, `start`, and `end` onto another error does not authenticate it. A diagnostic from another installed copy or module instance also returns `false`.
 
 ## Syntax
 

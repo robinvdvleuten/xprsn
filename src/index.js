@@ -8,12 +8,14 @@
 // `?.` must not swallow the `?` of a ternary before a bare decimal.
 const TOKEN = /\s+|\d*\.?\d+(?:[eE][+-]?\d+)?|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*'|[\w$@]+|\?\.(?!\d)|\?\?|=>|[<>=!*]=|&&|\|\||\*\*|\S/y;
 let length, pos;
+let diags = new WeakSet(), mark = diags.add.bind(diags);
+export let isDiagnostic = diags.has.bind(diags);
 let fault = (Type, msg, code, start, end) => {
 	let e = Type(msg);
 	e.code = code;
 	e.start = start;
 	e.end = end;
-	return e;
+	return mark(e), e;
 };
 let lex = s => {
 	let out = [], at, t;

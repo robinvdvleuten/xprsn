@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { compile, evaluate } from '../src/index.js';
+import { compile, evaluate, isDiagnostic } from '../src/index.js';
 
 test('prototype escape hatches are blocked', () => {
 	assert.throws(() => evaluate('a.constructor', { a: {} }), TypeError);
@@ -46,6 +46,7 @@ test('runtime diagnostics identify the failing read operation', () => {
 	let check = (src, values, code, start, end) => {
 		assert.throws(() => evaluate(src, values), e => {
 			assert.ok(e instanceof TypeError);
+			assert.ok(isDiagnostic(e));
 			assert.strictEqual(e.code, code);
 			assert.deepStrictEqual([e.start, e.end], [start, end]);
 			return true;
@@ -61,17 +62,35 @@ test('host errors pass through without xprsn diagnostics', () => {
 	let registry = TypeError('registry failed');
 	assert.throws(
 		() => evaluate('boom()', {}, { boom: () => { throw registry } }),
-		e => e === registry && !Object.hasOwn(e, 'code')
+		e => e === registry && !Object.hasOwn(e, 'code') && !isDiagnostic(e)
 	);
 	let getter = TypeError('getter failed');
 	assert.throws(
 		() => evaluate('a.b', { a: { get b() { throw getter } } }),
-		e => e === getter && !Object.hasOwn(e, 'code')
+		e => e === getter && !Object.hasOwn(e, 'code') && !isDiagnostic(e)
 	);
 	let method = TypeError('method failed');
 	assert.throws(
 		() => evaluate('a.m()', { a: { m() { throw method } } }),
-		e => e === method && !Object.hasOwn(e, 'code')
+		e => e === method && !Object.hasOwn(e, 'code') && !isDiagnostic(e)
+	);
+	let coercion = TypeError('coercion failed');
+	let value = { [Symbol.toPrimitive]() { throw coercion } };
+	assert.throws(
+		() => evaluate('value ~ ""', { value }),
+		e => e === coercion && !Object.hasOwn(e, 'code') && !isDiagnostic(e)
+	);
+});
+
+test('host errors cannot spoof diagnostic provenance', () => {
+	let spoof = Object.assign(TypeError('getter failed'), {
+		code: 'XPRSN_NULL_BASE',
+		start: 2,
+		end: 3,
+	});
+	assert.throws(
+		() => evaluate('a.b', { a: { get b() { throw spoof } } }),
+		e => e === spoof && !isDiagnostic(e)
 	);
 });
 

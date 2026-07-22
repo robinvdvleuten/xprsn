@@ -5,6 +5,11 @@
 type Fn = (...args: any[]) => any;
 
 /**
+ * Test whether an error was created by this xprsn module instance.
+ */
+export function isDiagnostic(error: unknown): boolean;
+
+/**
  * Compile an expression once, evaluate it many times.
  *
  * The returned evaluator exposes `names` (the free variables the expression

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { compile, evaluate } from '../src/index.js';
+import { compile, evaluate, isDiagnostic } from '../src/index.js';
 
 test('syntax errors', () => {
 	assert.throws(() => compile(''), /Unexpected end of expression/);
@@ -54,6 +54,7 @@ test('compile errors expose stable codes and source spans', () => {
 	let check = (src, code, start, end, funcs) => {
 		assert.throws(() => compile(src, funcs), e => {
 			assert.ok(e instanceof SyntaxError);
+			assert.ok(isDiagnostic(e));
 			assert.strictEqual(e.code, code);
 			assert.deepStrictEqual([e.start, e.end], [start, end]);
 			return true;
@@ -67,4 +68,47 @@ test('compile errors expose stable codes and source spans', () => {
 
 	const deep = '('.repeat(50000) + '1' + ')'.repeat(50000);
 	check(deep, 'XPRSN_TOO_DEEP', 0, deep.length);
+});
+
+test('diagnostic provenance cannot be copied', () => {
+	for (const value of [null, undefined, 1, 'XPRSN_SYNTAX', {}, SyntaxError('host')])
+		assert.strictEqual(isDiagnostic(value), false);
+
+	const spoof = Object.assign(SyntaxError('spoof'), {
+		code: 'XPRSN_SYNTAX',
+		start: 0,
+		end: 1,
+	});
+	assert.strictEqual(isDiagnostic(spoof), false);
+});
+
+test('diagnostic provenance is local to a module instance', async () => {
+	const other = await import('../src/index.js?instance=provenance');
+	let first, second;
+	try { compile('') } catch (e) { first = e }
+	try { other.compile('') } catch (e) { second = e }
+
+	assert.ok(isDiagnostic(first));
+	assert.ok(other.isDiagnostic(second));
+	assert.strictEqual(isDiagnostic(second), false);
+	assert.strictEqual(other.isDiagnostic(first), false);
+});
+
+test('captured provenance operations resist later prototype replacement', () => {
+	const add = WeakSet.prototype.add;
+	const has = WeakSet.prototype.has;
+	try {
+		WeakSet.prototype.add = function () { return this };
+		WeakSet.prototype.has = () => true;
+		const spoof = Object.assign(SyntaxError('spoof'), {
+			code: 'XPRSN_SYNTAX',
+			start: 0,
+			end: 0,
+		});
+		assert.strictEqual(isDiagnostic(spoof), false);
+		assert.throws(() => compile(''), e => isDiagnostic(e));
+	} finally {
+		WeakSet.prototype.add = add;
+		WeakSet.prototype.has = has;
+	}
 });

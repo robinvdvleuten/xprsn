@@ -1,6 +1,6 @@
 import assert from 'node:assert';
 import { FuzzedDataProvider } from '@jazzer.js/core';
-import { compile } from '../src/index.js';
+import { compile, isDiagnostic } from '../src/index.js';
 
 const OPS = ['+','-','*','/','%','**','~','==','!=','<','>','<=','>=','and','or','&&','||','??','in'];
 const UNARY = ['!','-','+','not '];
@@ -217,10 +217,11 @@ const CODES = new Set([
 	'XPRSN_NOT_CALLABLE',
 ]);
 const checkDiag = (e, src, required) => {
-	if (!Object.hasOwn(e, 'code')) {
-		if (required) throw new Error('xprsn error lacks diagnostics');
+	if (!isDiagnostic(e)) {
+		if (required || Object.hasOwn(e, 'code')) throw new Error('xprsn error lacks provenance');
 		return;
 	}
+	if (!Object.hasOwn(e, 'code')) throw new Error('xprsn error lacks diagnostics');
 	if (!CODES.has(e.code)) throw new Error('unknown diagnostic code');
 	if (!Number.isInteger(e.start) || !Number.isInteger(e.end) ||
 		e.start < 0 || e.end < e.start || e.end > src.length)
