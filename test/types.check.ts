@@ -1,4 +1,4 @@
-// Type smoke test for index.d.ts — run via `npm run typecheck`.
+// Type smoke test for index.d.ts — run via `npm run test:types`.
 // The declarations are plain (no expression-level inference), so this only
 // checks the public API is callable with the expected shapes.
 import {

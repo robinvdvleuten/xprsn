@@ -4,10 +4,11 @@ Tiny, CSP-safe expression language for JavaScript. Zero runtime dependencies, pl
 
 ## Commands
 
-- `npm test` — tape suites under `node --disallow-code-generation-from-strings` (strict-CSP simulation), then `npm run typecheck` (a smoke check that `index.d.ts` is usable, in `test/types.check.ts`).
+- `npm test` — Node's built-in test runner under `--disallow-code-generation-from-strings` (strict-CSP simulation), then `npm run test:types` (a smoke check that `index.d.ts` is usable, in `test/types.check.ts`). Keep this on Node: Bun accepts that V8 flag but does not enforce it.
 - `npm run build` — tsdown (rolldown + oxc), configured in `tsdown.config.js` → `dist/` (ESM/CJS targeting ES2024). Type generation is off; `index.d.ts` is hand-written.
 - `npm run size` — size-limit checks the gzip size of `dist/index.js` and `dist/index.cjs` against the budgets in `package.json`.
-- Run a single suite: `npx tape test/evaluate.test.js`
+- `npm run test:browser` — builds the package and runs the browser bundle in Playwright Chromium under a strict CSP.
+- Run a single suite: `node --disallow-code-generation-from-strings --test test/evaluate.test.js`
 - `npm run bench` — zero-dependency micro-benchmarks in `bench/`, run against `src/`. Measures compile (parse) and evaluate throughput separately, since the design is compile-once, evaluate-many. `bench/` is not in `files`, so it is never published.
 - `npm run fuzz` — jazzer.js fuzz targets in `fuzz/` (compile / evaluate / structured), against `src/`, 60s each. `npm run fuzz:regression` deterministically replays the minimized committed corpus (CI-safe, used by `.github/workflows/fuzz.yml`). Nightly discovery restores and updates a private GitHub Actions corpus cache. The structured target asserts the real safety properties — no prototype pollution, blocked-key reads throw, deterministic eval — not just "doesn't crash". `fuzz/` is not in `files`, so it is never published.
 
@@ -24,6 +25,10 @@ Parser state (`toks`, `i`, `fns`) is module-level and shared; parsing is synchro
 3. Hash literals must stay null-prototype (`Object.create(null)`) so `{"__proto__": x}` cannot pollute. `in` on objects must use `Object.hasOwn`, never the JS `in` operator. Expression functions resolve only from the registry passed to `compile`, at compile time.
 4. **Size is a soft goal (~1.2KB min+gzip).** Code is written lukeed-style *for* the minifier and gzip: single-letter-manglable module-private arrows, repetition over abstraction, data-driven operator tables. Prefer terse constructs, but never trade a safety guard or a passing test for bytes. Check the size impact of changes with `npm run build`.
 
+## Omakase pragmatism
+
+Apply this across the whole project: implementation, API design, tests, documentation, dependencies, and tooling. Prefer cohesive defaults and one obvious path over knobs, abstraction, or infrastructure. Test the guarantee users rely on directly, and add complexity only when concrete pressure justifies it. These preferences never weaken the hard safety constraints.
+
 ## Semantics to preserve
 
 - `==`/`!=` compile to strict `===`/`!==` (documented, intentional).
@@ -39,8 +44,8 @@ Parser state (`toks`, `i`, `fns`) is module-level and shared; parsing is synchro
 ## Conventions
 
 - Tabs for indentation. Comments only where the code can't speak (safety rationale, non-obvious tricks).
-- Tests are tape, in `test/*.test.js`, run directly against `src/` (no build needed). New syntax or guards need tests in the matching suite (`evaluate`, `safety`, or `errors`). A new syntax form or safety guard should also be reflected in the structured fuzz generator (`fuzz/structured.fuzz.js`) so the fuzzer keeps exercising it.
+- Tests use `node:test`, live in `test/*.test.js`, and run directly against `src/` (no build needed). New syntax or guards need tests in the matching suite (`evaluate`, `safety`, or `errors`). A new syntax form or safety guard should also be reflected in the structured fuzz generator (`fuzz/structured.fuzz.js`) so the fuzzer keeps exercising it.
 - Do not mention Symfony in code, comments, or docs.
 - Runtime support is Node.js 22+ through ESM/CJS and ES2024 browser environments through a standards-based ESM bundler. There is no direct-script global or UMD build.
 - Suggested commit messages must follow Conventional Commits and be at most 80 characters.
-- `dist/` is gitignored build output. `index.d.ts` is **hand-written** (bundler type generation is off via `dts: false` in `tsdown.config.js`) and kept deliberately plain: two function signatures, `values` typed as `Record<string, any>`, `names`/`functions` as `string[]`. No expression-level type inference — that machinery was dropped as too heavy for the value. `test/types.check.ts` (run by `npm run typecheck`, part of `npm test`) is just a smoke check that the declarations are callable.
+- `dist/` is gitignored build output. `index.d.ts` is **hand-written** (bundler type generation is off via `dts: false` in `tsdown.config.js`) and kept deliberately plain: two function signatures, `values` typed as `Record<string, any>`, `names`/`functions` as `string[]`. No expression-level type inference — that machinery was dropped as too heavy for the value. `test/types.check.ts` (run by `npm run test:types`, part of `npm test`) is just a smoke check that the declarations are callable.

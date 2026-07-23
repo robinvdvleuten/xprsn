@@ -184,6 +184,8 @@ Content-Security-Policy: script-src 'self'
 
 It needs no `unsafe-eval` because the compiler only composes arrow functions that already exist in the shipped source; it never turns expression text into JavaScript. The test suite runs under `node --disallow-code-generation-from-strings`, which throws on any string-to-code construct the same way a strict CSP does, and a test checks the source for such constructs. The library never touches the DOM, so you don't need a Trusted Types policy.
 
+`npm run test:browser` builds the ESM bundle and verifies this policy in Playwright Chromium, including representative blocked-key escape attempts. This proves CSP compatibility, not containment of registry functions or host objects you deliberately expose.
+
 ## Safety
 
 Expressions can only read the data you pass in:
