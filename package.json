@@ -42,6 +42,7 @@
 	"scripts": {
 		"bench": "node --disallow-code-generation-from-strings bench/index.js",
 		"build": "tsdown",
+		"check": "run-s build size test test:browser fuzz:regression",
 		"fuzz": "npm run fuzz:prepare && run-s fuzz:compile fuzz:evaluate fuzz:structured",
 		"fuzz:prepare": "node -e \"for (const x of ['compile','evaluate','structured']) require('fs').mkdirSync('.fuzz-corpus/'+x,{recursive:true})\"",
 		"fuzz:compile": "NODE_OPTIONS=--disallow-code-generation-from-strings jazzer fuzz/compile.fuzz.js -i src/ --customHooks fuzz/hooks.js --disableBugDetectors='command-injection|path-traversal|ssrf' --sync .fuzz-corpus/compile fuzz/corpus/compile -- -max_total_time=60 -use_value_profile=1 -dict=fuzz/xprsn.dict -artifact_prefix=fuzz/",
