@@ -3,9 +3,9 @@
 A tiny, CSP-safe expression language for JavaScript. **~1.8KB min+compressed, zero dependencies.**
 
 [![NPM version](https://img.shields.io/npm/v/xprsn.svg)](https://www.npmjs.com/package/xprsn)
-[![Build Status](https://github.com/robinvdvleuten/xprsn/actions/workflows/test.yml/badge.svg)](https://github.com/robinvdvleuten/xprsn/actions/workflows/test.yml)
+[![Build Status](https://github.com/getquario/xprsn/actions/workflows/test.yml/badge.svg)](https://github.com/getquario/xprsn/actions/workflows/test.yml)
 [![NPM downloads](https://img.shields.io/npm/dm/xprsn.svg)](https://www.npmjs.com/package/xprsn)
-[![MIT license](https://img.shields.io/github/license/robinvdvleuten/xprsn.svg)](https://github.com/robinvdvleuten/xprsn/blob/main/LICENSE)
+[![MIT license](https://img.shields.io/github/license/getquario/xprsn.svg)](https://github.com/getquario/xprsn/blob/main/LICENSE)
 
 <a href="https://webstronauts.com?utm_source=github&utm_medium=readme&utm_campaign=xprsn">
 	<picture>
@@ -36,8 +36,8 @@ evaluate('lower(name) == "robin"', { name: 'ROBIN' }, { lower: s => s.toLowerCas
 
 Pretty far. The same trick, a one-regex tokenizer feeding a parser that emits closures, carries into two sibling packages:
 
-- [sjabloon](https://github.com/robinvdvleuten/sjabloon) is a full template engine built directly on xprsn: `{{ expr }}` interpolation with HTML escaping, `{{#if}}`/`{{#elif}}` and `{{#each}}` blocks, and any xprsn expression inside every tag. About 1KB on top of this package.
-- [padvinder](https://github.com/robinvdvleuten/padvinder) is a JSONPath engine that started here and grew its own parser. Filter evaluation is the part of JSONPath that has produced real code-injection CVEs elsewhere; padvinder parses filters to closures with no route to code execution, and now passes the full RFC 9535 compliance suite as a standalone, zero-dependency package.
+- [sjabloon](https://github.com/getquario/sjabloon) is a full template engine built directly on xprsn: `{{ expr }}` interpolation with HTML escaping, `{{#if}}`/`{{#elif}}` and `{{#each}}` blocks, and any xprsn expression inside every tag. About 1KB on top of this package.
+- [padvinder](https://github.com/getquario/padvinder) is a JSONPath engine that started here and grew its own parser. Filter evaluation is the part of JSONPath that has produced real code-injection CVEs elsewhere; padvinder parses filters to closures with no route to code execution, and now passes the full RFC 9535 compliance suite as a standalone, zero-dependency package.
 
 ## API
 
@@ -121,7 +121,7 @@ Each function returned by `compile` also has `isDiagnostic(error)`. This narrowe
 
 `$` and `@` are ordinary identifier characters, so a variable can be named `$` or `@` (they still read through the same prototype guard). On their own they buy little, since xprsn reads from one flat values object. They pay off once a host stacks nested scopes.
 
-[sjabloon](https://github.com/robinvdvleuten/sjabloon), the template engine built on xprsn, is the concrete case. It layers a fresh child scope on every `{{#each}}` iteration with `Object.create`, so a loop variable and the surrounding variables coexist and an inner name shadows an outer one of the same name. In that setting a plain name always resolves to the nearest scope. Binding `$` and `@` gives an expression a fixed handle on a chosen level instead: set `@` to the current item and `$` to the root, and `@.price * $.taxRate` says exactly which scope each name comes from.
+[sjabloon](https://github.com/getquario/sjabloon), the template engine built on xprsn, is the concrete case. It layers a fresh child scope on every `{{#each}}` iteration with `Object.create`, so a loop variable and the surrounding variables coexist and an inner name shadows an outer one of the same name. In that setting a plain name always resolves to the nearest scope. Binding `$` and `@` gives an expression a fixed handle on a chosen level instead: set `@` to the current item and `$` to the root, and `@.price * $.taxRate` says exactly which scope each name comes from.
 
 ```js
 evaluate('@.price * $.taxRate', { '@': { price: 20 }, '$': { taxRate: 1.21 } });

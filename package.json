@@ -2,7 +2,7 @@
 	"name": "xprsn",
 	"version": "0.8.0",
 	"description": "Tiny, CSP-safe expression language for JavaScript. No eval, no new Function.",
-	"repository": "robinvdvleuten/xprsn",
+	"repository": "getquario/xprsn",
 	"license": "MIT",
 	"author": {
 		"name": "Robin van der Vleuten",
