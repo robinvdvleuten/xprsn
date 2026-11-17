@@ -15,7 +15,7 @@
     "email": "robin@webstronauts.com",
     "url": "https://robinvdvleuten.nl"
   },
-  "repository": "getquario/xprsn",
+  "repository": "robinvdvleuten/xprsn",
   "files": [
     "lib",
     "EMBEDDING.md"

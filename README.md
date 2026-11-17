@@ -20,8 +20,6 @@ evaluate('user.age > 18 and "admin" in user.roles', {
 //=> true
 ```
 
-<img src="https://getquario.com/favicon.svg" alt="Quario logo" width="16" height="16" /> <b>xprsn</b> is built by the team behind <b><a href="https://getquario.com?utm_source=github&utm_medium=readme&utm_campaign=xprsn">Quario</a></b>, a declarative reporting engine for JavaScript that renders JSON report definitions to <b>HTML, PDF, workbooks, and Word</b> — without <code>eval</code>.
-
 ## Contents
 
 - [Install](#install)
@@ -90,10 +88,10 @@ xprsn evaluates one expression against one values object and returns one value. 
 
 An expression produces a single value. Two sibling packages carry the same closure-compiling approach further, and one of them may be closer to what you're actually after:
 
-- **[sjabloon](https://github.com/getquario/sjabloon)** — a template engine, if you need _text_ rather than a value: `{{ expr }}` interpolation with HTML escaping, `{{#if}}`/`{{#elif}}` and `{{#each}}` blocks, and any xprsn expression inside every tag. About 1KB on top of this package.
-- **[padvinder](https://github.com/getquario/padvinder)** — a JSONPath engine, if you need to _select many nodes_ out of a document rather than compute one value. Filter evaluation is the part of JSONPath that has produced real code-injection CVEs elsewhere; padvinder parses filters to closures with no route to code execution, and passes the full RFC 9535 compliance suite.
+- **[sjabloon](https://github.com/robinvdvleuten/sjabloon)** — a template engine, if you need _text_ rather than a value: `{{ expr }}` interpolation with HTML escaping, `{{#if}}`/`{{#elif}}` and `{{#each}}` blocks, and any xprsn expression inside every tag. About 1KB on top of this package.
+- **[padvinder](https://github.com/robinvdvleuten/padvinder)** — a JSONPath engine, if you need to _select many nodes_ out of a document rather than compute one value. Filter evaluation is the part of JSONPath that has produced real code-injection CVEs elsewhere; padvinder parses filters to closures with no route to code execution, and passes the full RFC 9535 compliance suite.
 
-All three parse to closures and are safe under the same CSP terms. Their only runtime dependencies are each other and [waarmerk](https://github.com/getquario/waarmerk), the located-diagnostic module they share.
+All three parse to closures and are safe under the same CSP terms. Their only runtime dependencies are each other and [waarmerk](https://github.com/robinvdvleuten/waarmerk), the located-diagnostic module they share.
 
 ## Syntax
 
@@ -276,7 +274,7 @@ If you compile xprsn source out of a larger document — a cell in a report, a f
 ## Contributing
 
 ```bash
-git clone https://github.com/getquario/xprsn.git
+git clone https://github.com/robinvdvleuten/xprsn.git
 cd xprsn
 npm install
 git config core.hooksPath .githooks   # enable the commit-msg hook

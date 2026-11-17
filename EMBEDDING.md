@@ -187,7 +187,7 @@ evaluate("@.price * $.taxRate", { "@": { price: 20 }, $: { taxRate: 1.21 } });
 ```
 
 They pay off once a host stacks nested scopes.
-[sjabloon](https://github.com/getquario/sjabloon), the template engine built on
+[sjabloon](https://github.com/robinvdvleuten/sjabloon), the template engine built on
 xprsn, is the concrete case. It layers a fresh child scope on every `{{#each}}`
 iteration with `Object.create`, so a loop variable and the surrounding variables
 coexist and an inner name shadows an outer one of the same name. In that setting
